@@ -146,5 +146,5 @@ export default function DanhSachPage() {
       </div>
     </div>
   );
-}
 
+};

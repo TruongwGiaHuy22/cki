@@ -544,7 +544,7 @@ export const novels = [
     status: "Hoàn thành",
     type: "Sáng tác",
     featured: true,
-    top: null,
+    top: "week",
     chapters: [
       { id: 3001, title: "Chương 1", content: "Nội dung..." },
     ],

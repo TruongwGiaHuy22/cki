@@ -121,6 +121,7 @@ export default function Home() {
 
       {/* Top tuần & Top tháng - 2 cột */}
       <div className="home-row home-row-2 mb-8">
+        {/* Top tuần */}
         <section className="home-grid-section">
           <div className="home-section-header">
             <div className="home-section-tags">
@@ -128,7 +129,7 @@ export default function Home() {
             </div>
           </div>
           <div className="home-card-grid home-card-grid-3">
-            {topWeekNovels.map(novel => (
+            {topWeekNovels.slice(0, 3).map(novel => (
               <article key={novel.id} className="home-card">
                 <img src={novel.cover} alt={novel.title} className="home-card-img cover-img" />
                 <div className="home-card-meta">
@@ -138,14 +139,13 @@ export default function Home() {
                 </div>
               </article>
             ))}
-            <article className="home-card home-card-view-more">
-              <div className="view-more-content">
-                <span>Xem thêm →</span>
-              </div>
-            </article>
+          </div>
+          <div className="home-section-footer">
+            <Link to="/top-tuan" className="view-more">Xem thêm →</Link>
           </div>
         </section>
 
+        {/* Top tháng giống Top tuần: chỉ hiện 3 truyện, nút Xem thêm ở dưới */}
         <section className="home-grid-section">
           <div className="home-section-header">
             <div className="home-section-tags">
@@ -153,7 +153,7 @@ export default function Home() {
             </div>
           </div>
           <div className="home-card-grid home-card-grid-3">
-            {topMonthNovels.map(novel => (
+            {topMonthNovels.slice(0, 3).map(novel => (
               <article key={novel.id} className="home-card">
                 <img src={novel.cover} alt={novel.title} className="home-card-img cover-img" />
                 <div className="home-card-meta">
@@ -163,11 +163,9 @@ export default function Home() {
                 </div>
               </article>
             ))}
-            <article className="home-card home-card-view-more">
-              <div className="view-more-content">
-                <span>Xem thêm →</span>
-              </div>
-            </article>
+          </div>
+          <div className="home-section-footer">
+            <Link to="/top-thang" className="view-more">Xem thêm →</Link>
           </div>
         </section>
       </div>
