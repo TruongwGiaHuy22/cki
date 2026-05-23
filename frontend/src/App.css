@@ -1796,3 +1796,79 @@ header,
   border-radius: 0.3rem;
   font-weight: 700;
 }
+/* ============================ */
+/* quản lý truyện */ 
+.ql-container {
+  display: flex;
+  height: 100vh;
+  font-family: Arial;
+}
+
+/* SIDEBAR */
+.ql-sidebar {
+  width: 260px;
+  border-right: 1px solid #ddd;
+  padding: 10px;
+  background: #fafafa;
+}
+
+.ql-novel-item {
+  padding: 10px;
+  cursor: pointer;
+  border-radius: 6px;
+}
+
+.ql-novel-item:hover {
+  background: #eee;
+}
+
+.ql-novel-item.active {
+  background: #dbeafe;
+  font-weight: bold;
+}
+
+/* CONTENT */
+.ql-content {
+  flex: 1;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.ql-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.btn-add {
+  padding: 8px 12px;
+  background: #2563eb;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.volume-box {
+  margin-top: 15px;
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+}
+
+.volume-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.btn-small {
+  padding: 5px 10px;
+  font-size: 12px;
+}
+
+.chapter-item {
+  padding: 6px 10px;
+  margin-left: 10px;
+  border-left: 2px solid #ccc;
+} 

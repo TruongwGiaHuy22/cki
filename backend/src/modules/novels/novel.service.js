@@ -1,56 +1,8 @@
 const pool = require("../../config/db");
 
-async function list() {
-  const [rows] = await pool.query(
-    `SELECT
-      q.idln AS id,
-      q.title,
-      q.cover,
-      q.type,
-      q.author,
-      q.authordraw,
-      q.description,
-      q.statuss AS status,
-      GROUP_CONCAT(t.ten_tl ORDER BY t.ten_tl SEPARATOR '||') AS genres_raw
-    FROM QLTT q
-    LEFT JOIN truyen_theloai tt ON tt.idln = q.idln
-    LEFT JOIN theloai t ON t.id_tl = tt.id_tl
-    GROUP BY q.idln, q.title, q.cover, q.type, q.author, q.authordraw, q.description, q.statuss
-    ORDER BY q.idln DESC`
-  );
-  return rows.map((r) => ({
-    ...r,
-    genres: r.genres_raw ? r.genres_raw.split("||").filter(Boolean) : [],
-  }));
-}
-
-async function getById(id) {
-  const [rows] = await pool.query(
-    `SELECT
-      q.idln AS id,
-      q.title,
-      q.cover,
-      q.type,
-      q.author,
-      q.authordraw,
-      q.description,
-      q.statuss AS status,
-      GROUP_CONCAT(t.ten_tl ORDER BY t.ten_tl SEPARATOR '||') AS genres_raw
-    FROM QLTT q
-    LEFT JOIN truyen_theloai tt ON tt.idln = q.idln
-    LEFT JOIN theloai t ON t.id_tl = tt.id_tl
-    WHERE q.idln = ?
-    GROUP BY q.idln, q.title, q.cover, q.type, q.author, q.authordraw, q.description, q.statuss
-    LIMIT 1`,
-    [id]
-  );
-  if (!rows[0]) return null;
-  return {
-    ...rows[0],
-    genres: rows[0].genres_raw ? rows[0].genres_raw.split("||").filter(Boolean) : [],
-  };
-}
-
+/* =======================
+   UTIL
+======================= */
 function toSlug(input) {
   return String(input || "")
     .toLowerCase()
@@ -60,188 +12,235 @@ function toSlug(input) {
     .replace(/^-+|-+$/g, "");
 }
 
-async function create(data, userId) {
-  const slug = data.slug?.trim() ? toSlug(data.slug) : toSlug(data.title);
-  const [result] = await pool.query(
-    `INSERT INTO QLTT
-      (title, slug, cover, banner, author, authordraw, description, type, statuss, age_limit, created_by, updated_by)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [
-      data.title,
-      slug || null,
-      data.cover || null,
-      data.banner || null,
-      data.author,
-      data.authordraw || null,
-      data.description || "",
-      data.type || "Truyện dịch",
-      data.statuss || "Đang tiến hành",
-      Number(data.age_limit || 0),
-      userId,
-      userId,
-    ]
-  );
-  return getById(result.insertId);
-}
+const safeStr = (v) => (typeof v === "string" ? v.trim() : "");
+const safeNum = (v, def = 0) => (isNaN(Number(v)) ? def : Number(v));
 
-async function update(id, data) {
-  const allowed = ["title", "author", "description", "status"];
-  const entries = Object.entries(data).filter(([key]) => allowed.includes(key));
-  if (!entries.length) return getById(id);
-
-  // Map "status" to "statuss" for QLTT
-  const mappedEntries = entries.map(([key, value]) => [key === "status" ? "statuss" : key, value]);
-  const setClause = mappedEntries.map(([key]) => `${key} = ?`).join(", ");
-  const values = mappedEntries.map(([, value]) => value);
-  await pool.query(`UPDATE QLTT SET ${setClause} WHERE idln = ?`, [...values, id]);
-  return getById(id);
-}
-
-async function remove(id) {
-  const [result] = await pool.query("DELETE FROM QLTT WHERE idln = ?", [id]);
-  return result.affectedRows > 0;
-}
-
-async function detail(id) {
-  // Lấy truyện
-  const [rows] = await pool.query(
-    `SELECT
+/* =======================
+   LIST
+======================= */
+async function list() {
+  const [rows] = await pool.query(`
+    SELECT
       q.idln AS id,
       q.title,
+      q.slug,
       q.cover,
       q.type,
       q.author,
       q.authordraw,
       q.description,
-      q.statuss AS status
+      q.statuss AS status,
+      q.age_limit,
+      q.total_chapters,
+      q.total_words,
+      q.view_count,
+      q.follow_count,
+      q.comment_count,
+      q.rating_avg,
+      q.rating_count,
+      q.active,
+      q.created_at,
+      q.updated_at,
+      GROUP_CONCAT(t.ten_tl ORDER BY t.ten_tl SEPARATOR '||') AS genres_raw
+    FROM QLTT q
+    LEFT JOIN truyen_theloai tt ON tt.idln = q.idln
+    LEFT JOIN theloai t ON t.id_tl = tt.id_tl
+    GROUP BY q.idln
+    ORDER BY q.idln DESC
+  `);
+
+  return rows.map(r => ({
+    ...r,
+    genres: r.genres_raw ? r.genres_raw.split("||").filter(Boolean) : []
+  }));
+}
+
+/* =======================
+   GET BY ID
+======================= */
+async function getById(id) {
+  const [rows] = await pool.query(`
+    SELECT
+      q.idln AS id,
+      q.title,
+      q.slug,
+      q.cover,
+      q.type,
+      q.author,
+      q.authordraw,
+      q.description,
+      q.statuss AS status,
+      q.age_limit
     FROM QLTT q
     WHERE q.idln = ?
-    LIMIT 1`,
-    [id]
-  );
-  if (!rows[0]) return null;
-  const novel = rows[0];
-  // Lấy thể loại
-  const [genres] = await pool.query(
-    `SELECT t.ten_tl FROM truyen_theloai tt
-     JOIN theloai t ON tt.id_tl = t.id_tl
-     WHERE tt.idln = ?`, [id]);
-  novel.genres = genres.map(g => g.ten_tl);
-  // Lấy volume + chapters theo volume nếu schema đã hỗ trợ
-  try {
-    const [volumeRows] = await pool.query(
-      `SELECT
-        v.volume_id AS volume_id,
-        v.volume_number,
-        v.title AS volume_title,
-        NULL AS volume_cover,
-        c.chapter_id AS chapter_id,
-        c.title AS chapter_title
-      FROM volumes v
-      LEFT JOIN chapters c ON c.volume_id = v.volume_id
-      WHERE v.idln = ?
-      ORDER BY v.volume_number ASC, c.chapter_number ASC, c.chapter_id ASC`,
-      [id]
-    );
+    LIMIT 1
+  `, [id]);
 
-    if (volumeRows.length > 0) {
-      const grouped = new Map();
-      for (const row of volumeRows) {
-        if (!grouped.has(row.volume_id)) {
-          grouped.set(row.volume_id, {
-            id: row.volume_id,
-            volumeNumber: row.volume_number,
-            title: row.volume_title,
-            cover: row.volume_cover || null,
-            chapters: [],
-          });
-        }
-        if (row.chapter_id) {
-          grouped.get(row.volume_id).chapters.push({
-            id: row.chapter_id,
-            title: row.chapter_title,
-          });
-        }
-      }
-      novel.volumes = Array.from(grouped.values());
-      novel.chapters = novel.volumes.flatMap((v) => v.chapters);
-      return novel;
-    }
-  } catch (_) {
-    // Fallback cho DB cũ chưa có bảng volumes hoặc cột volume_id
+  if (!rows[0]) return null;
+
+  const novel = rows[0];
+
+  const [genres] = await pool.query(`
+    SELECT t.ten_tl
+    FROM truyen_theloai tt
+    JOIN theloai t ON t.id_tl = tt.id_tl
+    WHERE tt.idln = ?
+  `, [id]);
+
+  novel.genres = genres.map(g => g.ten_tl);
+
+  return novel;
+}
+
+/* =======================
+   CREATE (FIXED - NO BANNER)
+======================= */
+async function create(data, userId) {
+  console.log("CREATE INPUT:", data);
+
+  const title = safeStr(data.title);
+  const author = safeStr(data.author);
+  const authordraw = safeStr(data.authordraw);
+  const cover = safeStr(data.cover);
+  const description = safeStr(data.description);
+  const type = safeStr(data.type) || "Truyện dịch";
+  const statuss = safeStr(data.statuss) || "Đang tiến hành";
+
+  let baseSlug =
+    safeStr(data.slug) ? toSlug(data.slug) : toSlug(title);
+
+  if (!baseSlug) baseSlug = `truyen-${Date.now()}`;
+
+  let slug = baseSlug;
+  let count = 1;
+
+  while (true) {
+    const [check] = await pool.query(
+      "SELECT 1 FROM QLTT WHERE slug = ? LIMIT 1",
+      [slug]
+    );
+    if (check.length === 0) break;
+    slug = `${baseSlug}-${count++}`;
   }
 
-  // Fallback dữ liệu phẳng
+  const age_limit = safeNum(data.age_limit, 0);
+
+  /* INSERT (banner removed) */
+  const [result] = await pool.query(
+    `INSERT INTO QLTT
+    (title, slug, cover, author, authordraw, description, type, statuss, age_limit, created_by, updated_by)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      title,
+      slug,
+      cover,
+      author,
+      authordraw,
+      description,
+      type,
+      statuss,
+      age_limit,
+      userId,
+      userId
+    ]
+  );
+
+  const idln = result.insertId;
+
+  /* GENRES */
+  if (Array.isArray(data.genres)) {
+    for (const g of data.genres) {
+      const id_tl = Number(g);
+      if (!isNaN(id_tl)) {
+        await pool.query(
+          "INSERT INTO truyen_theloai (idln, id_tl) VALUES (?, ?)",
+          [idln, id_tl]
+        );
+      }
+    }
+  }
+
+  return getById(idln);
+}
+
+/* =======================
+   UPDATE
+======================= */
+async function update(id, data) {
+  const map = {
+    title: "title",
+    author: "author",
+    description: "description",
+    status: "statuss",
+    cover: "cover",
+    authordraw: "authordraw",
+    slug: "slug"
+  };
+
+  const fields = [];
+  const values = [];
+
+  for (const key in map) {
+    if (data[key] !== undefined) {
+      fields.push(`${map[key]} = ?`);
+
+      values.push(
+        key === "slug" ? toSlug(data[key]) : data[key]
+      );
+    }
+  }
+
+  if (!fields.length) return getById(id);
+
+  await pool.query(
+    `UPDATE QLTT SET ${fields.join(", ")} WHERE idln = ?`,
+    [...values, id]
+  );
+
+  return getById(id);
+}
+
+/* =======================
+   REMOVE
+======================= */
+async function remove(id) {
+  const [res] = await pool.query(
+    "DELETE FROM QLTT WHERE idln = ?",
+    [id]
+  );
+  return res.affectedRows > 0;
+}
+
+/* =======================
+   DETAIL
+======================= */
+async function detail(id) {
+  const novel = await getById(id);
+  if (!novel) return null;
+
   const [chapters] = await pool.query(
     "SELECT id_chuong AS id, title FROM chapters WHERE idln = ? ORDER BY id_chuong ASC",
     [id]
   );
+
   novel.chapters = chapters;
   novel.volumes = [
     {
       id: `legacy-${id}`,
       volumeNumber: 1,
       title: "Vol 1",
-      cover: null,
-      chapters,
-    },
+      chapters
+    }
   ];
+
   return novel;
 }
 
-async function chapters(id) {
-  const [rows] = await pool.query(
-    "SELECT chapter_id AS id, title FROM chapters WHERE idln = ? ORDER BY chapter_number ASC, chapter_id ASC", [id]);
-  return rows;
-}
-
-async function createVolume(idln, payload) {
-  const volumeNumber = Number(payload.volume_number);
-  const title = payload.title?.trim() || `Vol ${volumeNumber}`;
-  const [existing] = await pool.query(
-    "SELECT volume_id, idln, volume_number, title FROM volumes WHERE idln = ? AND volume_number = ? LIMIT 1",
-    [idln, volumeNumber]
-  );
-  if (existing.length) return existing[0];
-
-  const [result] = await pool.query(
-    "INSERT INTO volumes (idln, volume_number, title) VALUES (?, ?, ?)",
-    [idln, volumeNumber, title]
-  );
-  const [[created]] = await pool.query(
-    "SELECT volume_id, idln, volume_number, title FROM volumes WHERE volume_id = ?",
-    [result.insertId]
-  );
-  return created;
-}
-
-async function createChapter(idln, payload) {
-  let volumeId = payload.volume_id ? Number(payload.volume_id) : null;
-  if (!volumeId) {
-    const volume = await createVolume(idln, {
-      volume_number: Number(payload.volume_number || 1),
-      title: payload.volume_title || `Vol ${Number(payload.volume_number || 1)}`,
-    });
-    volumeId = volume.volume_id;
-  }
-
-  const chapterNumber = Number(payload.chapter_number);
-  const title = payload.title.trim();
-  const content = payload.content || "";
-  const slug = payload.slug?.trim() || null;
-  const wordCount = content.trim() ? content.trim().split(/\s+/).length : 0;
-
-  const [result] = await pool.query(
-    `INSERT INTO chapters (idln, volume_id, chapter_number, title, slug, content, word_count)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    [idln, volumeId, chapterNumber, title, slug, content, wordCount]
-  );
-  const [[created]] = await pool.query(
-    `SELECT chapter_id AS id, idln, volume_id, chapter_number, title, slug, word_count, created_at
-     FROM chapters WHERE chapter_id = ?`,
-    [result.insertId]
-  );
-  return created;
-}
-
-module.exports = { list, getById, create, update, remove, detail, chapters, createVolume, createChapter };
+module.exports = {
+  list,
+  getById,
+  create,
+  update,
+  remove,
+  detail
+};

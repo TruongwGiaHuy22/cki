@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 
 const API_BASE = "http://localhost:4000";
 
@@ -12,9 +13,22 @@ function toSlug(input) {
 }
 
 export default function DangTruyen() {
-  const genres = [
-    "Action","Adventure","Fantasy","Romance","Comedy","Drama","Horror","Mystery","Psychological","School Life","Slice of Life","Supernatural","Martial Arts","Magic","Military","Historical","Science Fiction","Mecha","Sports","Ecchi","Adult","Mature","Seinen","Shounen","Shoujo","Josei","Harem","Reverse Harem","Yuri","Boys Love","Shounen ai","Shoujo ai","Gender Bender","Isekai","Time Travel","Reincarnation","Regression","System","Dungeon","Survival","Apocalypse","Cultivation","Xianxia","Wuxia","Urban Fantasy","Game","Otome Game","Fanfiction","Parody","Satire","Tragedy","Suspense","Thriller","Detective","Dark","Family","Workplace","Cooking","Slow Life","Character Growth","Age Gap","Different Social Status","Female Protagonist","Yandere","Super Power","Monster","One shot","Chinese Novel","Korean Novel","English Novel","Web Novel","Adapted to Anime","Adapted to Manga","Adapted to Manhwa","Adapted to Manhua","Adapted to Drama CD","Misunderstanding","Netorare"
-  ];
+  const [genres, setGenres] = useState([]);
+  const navigate = useNavigate();
+  useEffect(() => {
+  async function fetchGenres() {
+    try {
+      const res = await fetch(`${API_BASE}/api/theloai`);
+      const json = await res.json();
+
+      setGenres(json.data || json);
+    } catch (err) {
+      console.error("Load genres error:", err);
+    }
+  }
+
+  fetchGenres();
+}, []);
 
   const [form, setForm] = useState({
     title: "",
@@ -50,6 +64,9 @@ export default function DangTruyen() {
     const payload = {
       ...form,
       slug: form.slug.trim() || toSlug(form.title),
+      cover: form.cover || "",
+      authordraw: form.authordraw || "",
+      description: form.description || "",
       age_limit: Number(form.age_limit || 0),
     };
 
@@ -72,8 +89,8 @@ export default function DangTruyen() {
   return (
     <div className="dangtruyen-page">
       <nav className="dangtruyen-topnav">
-        <button className="active">Thêm Truyện mới</button>
-        <button>Q.Lý truyện</button>
+        <button className="active" onClick={() => navigate("/dang-truyen")}>Thêm Truyện mới</button>
+        <button onClick={() => navigate("/quan-ly-truyen")}>Q.Lý truyện</button>
         <button>Q.Lý Convert</button>
         <button>Q.Lý Sáng tác</button>
         <button>Q.Lý Trang</button>
@@ -130,9 +147,9 @@ export default function DangTruyen() {
           <label>Thể loại</label>
           <div className="dangtruyen-genres">
             {genres.map((genre) => (
-              <label key={genre} className="dangtruyen-genre-item">
-                <input type="checkbox" checked={form.genres.includes(genre)} onChange={(e) => toggleGenre(genre, e.target.checked)} />
-                <span>{genre}</span>
+              <label key={genre.id_tl} className="dangtruyen-genre-item">
+                <input type="checkbox" checked={form.genres.includes(genre.id_tl)} onChange={(e) => toggleGenre(genre.id_tl, e.target.checked)} />
+                <span>{genre.ten_tl}</span>
               </label>
             ))}
           </div>

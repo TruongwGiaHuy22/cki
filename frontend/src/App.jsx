@@ -13,6 +13,7 @@ import Register from "./pages/dangki.jsx";
 import DanhSachSangTac from "./pages/DanhSachSangtac.jsx";
 import DanhSachAI from "./pages/DanhSachAI.jsx";
 import DangTruyen from "./pages/DangTruyen.jsx";
+import QuanLyTruyen from "./pages/quanlytruyen.jsx";
 function AppLayout() {
   const location = useLocation();
   const isLoginPage = location.pathname === "/login";
@@ -33,6 +34,7 @@ function AppLayout() {
           <Route path="/ai" element={<DanhSachAI />} />
           <Route path="/xuatban" element={<XuatBan />} />
           <Route path="/dang-truyen" element={<DangTruyen />} />
+          <Route path="/quan-ly-truyen" element={<QuanLyTruyen />} />
         </Routes>
       </main>
       {!isLoginPage && !isRegisterPage && <Footer />}
