@@ -5,6 +5,7 @@ export default function Header() {
   const location = useLocation();
   const [activeTab, setActiveTab] = useState("thongtin");
   const [isHidden, setIsHidden] = useState(false);
+  const [infoOpen, setInfoOpen] = useState(false);
 
   const tabs = [
     { id: "sangtac", label: "Sáng tác", path: "/sangtac" },
@@ -17,6 +18,11 @@ export default function Header() {
 
   // ✅ Active theo URL
   useEffect(() => {
+    if (location.pathname.startsWith("/dang-truyen")) {
+      setActiveTab("thongtin");
+      return;
+    }
+
     if (location.pathname === "/danhsach") {
       setActiveTab("danhsach");
       return;
@@ -75,6 +81,27 @@ export default function Header() {
       {/* TABS */}
       <div className="header-tabs">
         {tabs.map(tab => {
+          if (tab.id === "thongtin") {
+            return (
+              <div key={tab.id} className="header-info-dropdown">
+                <button
+                  onClick={() => setInfoOpen((v) => !v)}
+                  className={`tab-btn-small ${activeTab === tab.id ? "active" : ""}`}
+                >
+                  Thông tin {infoOpen ? "▴" : "▾"}
+                </button>
+                {infoOpen ? (
+                  <div className="header-info-menu">
+                    <Link to="/dang-truyen" className="header-info-item" onClick={() => { setActiveTab("thongtin"); setInfoOpen(false); }}>Đăng truyện</Link>
+                    <button className="header-info-item" onClick={() => setInfoOpen(false)}>Giới thiệu</button>
+                    <button className="header-info-item" onClick={() => setInfoOpen(false)}>Góp ý - Báo lỗi</button>
+                    <button className="header-info-item" onClick={() => setInfoOpen(false)}>Chính sách bảo mật</button>
+                    <button className="header-info-item" onClick={() => setInfoOpen(false)}>Điều khoản sử dụng</button>
+                  </div>
+                ) : null}
+              </div>
+            );
+          }
           // 👉 nếu có path → dùng Link
           if (tab.path) {
             return (

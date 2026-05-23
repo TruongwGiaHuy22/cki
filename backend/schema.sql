@@ -1,0 +1,17 @@
+-- Run this SQL once in your MySQL database
+CREATE TABLE IF NOT EXISTS users (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  username VARCHAR(50) NOT NULL,
+  email VARCHAR(120) NOT NULL UNIQUE,
+  password_hash VARCHAR(255) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS novels (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  title VARCHAR(255) NOT NULL,
+  author VARCHAR(120) NOT NULL,
+  description TEXT,
+  status ENUM('ongoing', 'completed') DEFAULT 'ongoing',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

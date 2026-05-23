@@ -2,8 +2,11 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 
 export default function LoginPage() {
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
   const [formData, setFormData] = useState({
-    username: "",
+    email: "",
     password: "",
     remember: false,
   });
@@ -16,9 +19,46 @@ export default function LoginPage() {
     });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("Login data:", formData);
+    setLoading(true);
+    setError("");
+    setMessage("");
+
+    try {
+      const res = await fetch("http://localhost:4000/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        const rawMessage = data?.message;
+        const textMessage =
+          typeof rawMessage === "string" ? rawMessage : JSON.stringify(rawMessage || "");
+        if (textMessage.includes("too_small") || textMessage.includes("password")) {
+          throw new Error("Bạn đã nhập sai mật khẩu");
+        }
+        throw new Error(textMessage || "Đăng nhập thất bại");
+      }
+
+      if (formData.remember) {
+        localStorage.setItem("token", data.data.token);
+      } else {
+        sessionStorage.setItem("token", data.data.token);
+      }
+
+      setMessage("Đăng nhập thành công");
+      window.location.href = "/";
+    } catch (err) {
+      setError(err.message || "Có lỗi xảy ra");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -31,8 +71,8 @@ export default function LoginPage() {
             Email hoặc Tên đăng nhập
             <input
               type="text"
-              name="username"
-              value={formData.username}
+              name="email"
+              value={formData.email}
               onChange={handleChange}
               className="login-input"
               required
@@ -67,9 +107,11 @@ export default function LoginPage() {
             </button>
           </div>
 
-          <button type="submit" className="login-button">
-            Đăng nhập
+          <button type="submit" className="login-button" disabled={loading}>
+            {loading ? "Đang đăng nhập..." : "Đăng nhập"}
           </button>
+          {error && <p style={{ color: "#fca5a5", margin: 0 }}>{error}</p>}
+          {message && <p style={{ color: "#86efac", margin: 0 }}>{message}</p>}
         </form>
 
         <div className="login-social">

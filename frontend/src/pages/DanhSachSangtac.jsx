@@ -1,7 +1,9 @@
 import { useMemo, useState } from "react";
-import { novels } from "../data/novel";
+import { Link } from "react-router-dom";
+import { useNovels } from "../hooks/useNovels";
 
 export default function DanhSachSangTac() {
+  const { novels, loading, error } = useNovels();
   const [selectedGenres, setSelectedGenres] = useState([]);
   const [selectedLetter, setSelectedLetter] = useState("ALL");
   const [selectedStatus, setSelectedStatus] = useState([]);
@@ -29,11 +31,12 @@ export default function DanhSachSangTac() {
     setCurrentPage(1);
   };
 
-  const baseSangTac = useMemo(() => novels.filter((n) => (n.type || "").trim() === "Sáng tác"), []);
+  const baseSangTac = useMemo(() => novels.filter((n) => (n.type || "").trim() === "Sáng tác"), [novels]);
 
   const filteredSangTac = useMemo(() => {
+    const normalize = (v) => String(v || "").trim().toLowerCase();
     return baseSangTac
-      .filter((n) => appliedStatus.length === 0 || appliedStatus.includes(n.status))
+      .filter((n) => appliedStatus.length === 0 || appliedStatus.some((s) => normalize(n.status).includes(normalize(s))))
       .filter((n) => selectedGenres.length === 0 || selectedGenres.some((g) => Array.isArray(n.genres) && n.genres.includes(g)))
       .filter((n) => {
         if (selectedLetter === "ALL") return true;
@@ -47,6 +50,9 @@ export default function DanhSachSangTac() {
   const totalPages = Math.max(1, Math.ceil(filteredSangTac.length / itemsPerPage));
   const startIndex = (currentPage - 1) * itemsPerPage;
   const visibleSangTac = filteredSangTac.slice(startIndex, startIndex + itemsPerPage);
+  
+  if (loading) return <div className="sangtac-container">Đang tải dữ liệu...</div>;
+  if (error) return <div className="sangtac-container">Lỗi: {error}</div>;
 
   return (
     <div className="sangtac-container">
@@ -57,7 +63,7 @@ export default function DanhSachSangTac() {
           const hasChapters = novel.chapters && novel.chapters.length > 0;
           const lastChapterTitle = hasChapters ? novel.chapters[novel.chapters.length - 1].title : "Chưa có chương";
           return (
-            <div key={novel.id} className="sangtac-card">
+            <Link key={novel.id} to={`/novel/${novel.id}`} className="sangtac-card">
               <img src={novel.cover || "/default.jpg"} alt={novel.title} className="sangtac-img" />
               <div className="sangtac-content">
                 <h3 className="sangtac-name">{novel.title}</h3>
@@ -71,7 +77,7 @@ export default function DanhSachSangTac() {
                 <p className="sangtac-chapter-main">{novel.sangTacInfo?.chapterMain || lastChapterTitle}</p>
                 <p className="sangtac-chapter-sub">{novel.sangTacInfo?.chapterSub || (hasChapters ? "" : "Đang cập nhật nội dung...")}</p>
               </div>
-            </div>
+            </Link>
           );
         })}
 

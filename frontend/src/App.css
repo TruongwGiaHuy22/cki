@@ -530,6 +530,42 @@ header,
   border-color: #fbbf24;
 }
 
+.header-info-dropdown {
+  position: relative;
+}
+
+.header-info-menu {
+  position: absolute;
+  top: 120%;
+  left: 0;
+  min-width: 190px;
+  background: #10141c;
+  border: 1px solid #2f3642;
+  border-radius: 0.35rem;
+  overflow: hidden;
+  z-index: 120;
+}
+
+.header-info-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  color: #e5e7eb;
+  background: transparent;
+  padding: 0.8rem 0.85rem;
+  border-bottom: 1px solid #232a35;
+  font-weight: 700;
+}
+
+.header-info-item:last-child {
+  border-bottom: none;
+}
+
+.header-info-item:hover {
+  background: #1a2230;
+  text-decoration: none;
+}
+
 /* ============================
    PAGE: HOME
 ============================ */
@@ -1539,4 +1575,224 @@ header,
   .xuatban-btn {
     align-self: center;
   }
+}
+
+/* NOVEL DETAIL */
+.noveldetail-page {
+  max-width: 1320px;
+  margin: 0 auto;
+  padding: 1rem;
+  color: #e5e7eb;
+}
+
+.noveldetail-hero {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  gap: 1.25rem;
+  background: #171a20;
+  border: 1px solid #2a303b;
+  border-radius: 0.75rem;
+  padding: 0.9rem;
+}
+
+.noveldetail-cover-wrap { position: relative; }
+.noveldetail-type-badge {
+  background: #2a88b8;
+  color: #fff;
+  font-weight: 700;
+  padding: 0.55rem 0.9rem;
+  border-radius: 0.45rem;
+  text-align: center;
+  margin-bottom: 0.7rem;
+}
+.noveldetail-cover {
+  width: 100%;
+  height: 430px;
+  object-fit: cover;
+  border-radius: 0.5rem;
+}
+
+.noveldetail-title {
+  margin: 0 0 0.7rem;
+  font-size: 2rem;
+  color: #f3f4f6;
+}
+
+.noveldetail-genres {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-bottom: 0.9rem;
+}
+.noveldetail-chip {
+  background: #252b35;
+  border: 1px solid #343d4a;
+  color: #f8fafc;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.9rem;
+}
+
+.noveldetail-meta p {
+  margin: 0 0 0.45rem;
+  font-size: 1rem;
+}
+
+.noveldetail-stats {
+  margin-top: 1rem;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border-top: 1px solid #2a303b;
+}
+.noveldetail-stats div {
+  padding: 0.85rem 0.5rem;
+  text-align: center;
+  border-right: 1px solid #2a303b;
+}
+.noveldetail-stats div:last-child { border-right: none; }
+.noveldetail-stats span { display: block; color: #94a3b8; font-size: 0.9rem; }
+.noveldetail-stats b { font-size: 1.2rem; color: #f8fafc; }
+
+.noveldetail-section {
+  margin-top: 1rem;
+  background: #171a20;
+  border: 1px solid #2a303b;
+  border-radius: 0.75rem;
+  padding: 1rem;
+}
+.noveldetail-section h2 { margin: 0 0 0.75rem; color: #f3f4f6; }
+.noveldetail-section p { margin: 0; line-height: 1.6; }
+
+.noveldetail-back {
+  display: inline-block;
+  margin-top: 1rem;
+  color: #dbeafe;
+}
+
+.dangtruyen-page {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 1rem 1.5rem;
+  color: #222;
+}
+
+.dangtruyen-topnav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  background: #ececec;
+  border: 1px solid #d7d7d7;
+  padding: 0.35rem;
+}
+
+.dangtruyen-topnav button {
+  background: transparent;
+  color: #444;
+  padding: 0.55rem 0.8rem;
+}
+
+.dangtruyen-topnav button.active {
+  color: #d72222;
+}
+
+.dangtruyen-breadcrumb {
+  margin-top: 1rem;
+  background: #f4f4f4;
+  border: 1px solid #d7d7d7;
+  padding: 0.7rem 0.9rem;
+}
+
+.dangtruyen-card {
+  margin-top: 1rem;
+  border: 1px solid #d7d7d7;
+  background: #f7f7f7;
+}
+
+.dangtruyen-card h2 {
+  margin: 0;
+  padding: 0.6rem 0.9rem;
+  border-bottom: 1px solid #d7d7d7;
+  font-size: 1.1rem;
+}
+
+.dangtruyen-note {
+  margin: 1rem;
+  background: #cfe9f5;
+  border: 1px solid #8dc3db;
+  border-left: 4px solid #ff4b4b;
+  padding: 0.8rem;
+}
+
+.dangtruyen-note p {
+  margin: 0 0 0.45rem;
+}
+
+.dangtruyen-note a {
+  color: #1a4f6b;
+  font-weight: 700;
+}
+
+.dangtruyen-form {
+  padding: 0 1rem 1rem;
+  display: grid;
+  grid-template-columns: 150px 1fr;
+  align-items: center;
+  gap: 0.7rem 0.8rem;
+}
+
+.dangtruyen-form label {
+  text-align: right;
+  font-size: 1rem;
+}
+
+.dangtruyen-form label span {
+  color: #d72222;
+}
+
+.dangtruyen-form input[type="text"],
+.dangtruyen-form select,
+.dangtruyen-form textarea {
+  width: 100%;
+  border: 1px solid #c7c7c7;
+  background: #fff;
+  padding: 0.6rem 0.65rem;
+  border-radius: 0.2rem;
+}
+
+.dangtruyen-checkbox {
+  justify-self: start;
+}
+
+.dangtruyen-genres {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.45rem 0.75rem;
+  max-height: 260px;
+  overflow-y: auto;
+  border: 1px solid #c7c7c7;
+  background: #fff;
+  padding: 0.7rem;
+  border-radius: 0.2rem;
+}
+
+.dangtruyen-genre-item {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.9rem;
+  text-align: left;
+}
+
+.dangtruyen-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.dangtruyen-submit {
+  background: #d72222;
+  color: #fff;
+  padding: 0.6rem 1rem;
+  border-radius: 0.3rem;
+  font-weight: 700;
 }

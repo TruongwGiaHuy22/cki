@@ -12,6 +12,7 @@ import DanhSach from "./pages/danhsach.jsx";
 import Register from "./pages/dangki.jsx";
 import DanhSachSangTac from "./pages/DanhSachSangtac.jsx";
 import DanhSachAI from "./pages/DanhSachAI.jsx";
+import DangTruyen from "./pages/DangTruyen.jsx";
 function AppLayout() {
   const location = useLocation();
   const isLoginPage = location.pathname === "/login";
@@ -31,6 +32,7 @@ function AppLayout() {
           <Route path="/sangtac" element={<DanhSachSangTac />} />
           <Route path="/ai" element={<DanhSachAI />} />
           <Route path="/xuatban" element={<XuatBan />} />
+          <Route path="/dang-truyen" element={<DangTruyen />} />
         </Routes>
       </main>
       {!isLoginPage && !isRegisterPage && <Footer />}
@@ -47,4 +49,3 @@ export default function App() {
     </BrowserRouter>
   );
 }
-

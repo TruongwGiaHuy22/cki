@@ -1,7 +1,9 @@
 import { useMemo, useState } from "react";
-import { novels } from "../data/novel";
+import { Link } from "react-router-dom";
+import { useNovels } from "../hooks/useNovels";
 
 export default function DanhSachAI() {
+  const { novels, loading, error } = useNovels();
   const [selectedGenres, setSelectedGenres] = useState([]);
   const [selectedLetter, setSelectedLetter] = useState("ALL");
   const [selectedStatus, setSelectedStatus] = useState([]);
@@ -29,11 +31,12 @@ export default function DanhSachAI() {
     setCurrentPage(1);
   };
 
-  const baseAI = useMemo(() => novels.filter((n) => (n.type || "").trim() === "AI"), []);
+  const baseAI = useMemo(() => novels.filter((n) => (n.type || "").trim() === "AI dịch"), [novels]);
 
   const filteredAI = useMemo(() => {
+    const normalize = (v) => String(v || "").trim().toLowerCase();
     return baseAI
-      .filter((n) => appliedStatus.length === 0 || appliedStatus.includes(n.status))
+      .filter((n) => appliedStatus.length === 0 || appliedStatus.some((s) => normalize(n.status).includes(normalize(s))))
       .filter((n) => selectedGenres.length === 0 || selectedGenres.some((g) => Array.isArray(n.genres) && n.genres.includes(g)))
       .filter((n) => {
         if (selectedLetter === "ALL") return true;
@@ -47,6 +50,9 @@ export default function DanhSachAI() {
   const totalPages = Math.max(1, Math.ceil(filteredAI.length / itemsPerPage));
   const startIndex = (currentPage - 1) * itemsPerPage;
   const visibleAI = filteredAI.slice(startIndex, startIndex + itemsPerPage);
+  
+  if (loading) return <div className="ai-container">Đang tải dữ liệu...</div>;
+  if (error) return <div className="ai-container">Lỗi: {error}</div>;
 
   return (
     <div className="ai-container">
@@ -57,7 +63,7 @@ export default function DanhSachAI() {
           const hasChapters = novel.chapters && novel.chapters.length > 0;
           const lastChapterTitle = hasChapters ? novel.chapters[novel.chapters.length - 1].title : "Chưa có chương";
           return (
-            <div key={novel.id} className="ai-card">
+            <Link key={novel.id} to={`/novel/${novel.id}`} className="ai-card">
               <img src={novel.cover || "/default.jpg"} alt={novel.title} className="ai-img" />
               <div className="ai-content">
                 <h3 className="ai-name">{novel.title}</h3>
@@ -71,7 +77,7 @@ export default function DanhSachAI() {
                 <p className="ai-chapter-main">{novel.sangTacInfo?.chapterMain || lastChapterTitle}</p>
                 <p className="ai-chapter-sub">{novel.sangTacInfo?.chapterSub || (hasChapters ? "" : "Đang cập nhật nội dung...")}</p>
               </div>
-            </div>
+            </Link>
           );
         })}
 

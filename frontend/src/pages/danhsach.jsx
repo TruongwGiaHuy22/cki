@@ -1,7 +1,9 @@
 import { useMemo, useState } from "react";
-import { novels } from "../data/novel.js";
+import { Link } from "react-router-dom";
+import { useNovels } from "../hooks/useNovels";
 
 export default function DanhSach() {
+  const { novels, loading, error } = useNovels();
   const [selectedGenres, setSelectedGenres] = useState([]);
   const [selectedLetter, setSelectedLetter] = useState("ALL");
   const [sortOrder, setSortOrder] = useState("latest");
@@ -72,9 +74,14 @@ export default function DanhSach() {
   };
 
   const filteredNovels = useMemo(() => {
+    const normalize = (v) => String(v || "").trim().toLowerCase();
     const result = novels.filter((novel) => {
-      const matchType = appliedTypes.length === 0 || appliedTypes.includes(novel.type);
-      const matchStatus = appliedStatus.length === 0 || appliedStatus.includes(novel.status);
+      const matchType =
+        appliedTypes.length === 0 ||
+        appliedTypes.some((t) => normalize(novel.type).includes(normalize(t)));
+      const matchStatus =
+        appliedStatus.length === 0 ||
+        appliedStatus.some((s) => normalize(novel.status).includes(normalize(s)));
       const matchGenre =
         selectedGenres.length === 0 ||
         selectedGenres.some((genre) => Array.isArray(novel.genres) && novel.genres.includes(genre));
@@ -94,11 +101,14 @@ export default function DanhSach() {
       return [...result].sort((a, b) => (b.title || "").localeCompare(a.title || "", "vi"));
     }
     return [...result].sort((a, b) => b.id - a.id);
-  }, [appliedTypes, appliedStatus, selectedGenres, selectedLetter, sortOrder]);
+  }, [novels, appliedTypes, appliedStatus, selectedGenres, selectedLetter, sortOrder]);
 
   const totalPages = Math.max(1, Math.ceil(filteredNovels.length / itemsPerPage));
   const startIndex = (currentPage - 1) * itemsPerPage;
   const visibleNovels = filteredNovels.slice(startIndex, startIndex + itemsPerPage);
+
+  if (loading) return <div className="danhsach-page">Đang tải dữ liệu...</div>;
+  if (error) return <div className="danhsach-page">Lỗi: {error}</div>;
 
   return (
     <div className="danhsach-page">
@@ -123,7 +133,7 @@ export default function DanhSach() {
         <section className="danhsach-content">
           <div className="danhsach-grid">
             {visibleNovels.map((novel) => (
-              <article key={novel.id} className="home-card danhsach-card">
+              <Link key={novel.id} to={`/novel/${novel.id}`} className="home-card danhsach-card">
                 <img src={novel.cover} alt={novel.title} className="home-card-img cover-img" />
                 <div className="home-card-meta">
                   <p className="home-card-label">{novel.type}</p>
@@ -131,7 +141,7 @@ export default function DanhSach() {
                   <p>{Array.isArray(novel.genres) ? novel.genres.join(", ") : ""}</p>
                   <span className="danhsach-status">{novel.status}</span>
                 </div>
-              </article>
+              </Link>
             ))}
           </div>
 
