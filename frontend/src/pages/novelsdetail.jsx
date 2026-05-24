@@ -81,8 +81,8 @@ export default function NovelDetail() {
           <div className="noveldetail-stats">
             <div><span>Lượt xem</span><b>{novel.views || "0"}</b></div>
             <div><span>Đánh giá</span><b>{novel.rating || "0 / 0"}</b></div>
-            <div><span>Số từ</span><b>{novel.wordCount || "Đang cập nhật"}</b></div>
-            <div><span>Cập nhật</span><b>{novel.updatedAt || "Mới nhất"}</b></div>
+            <div><span>Số từ</span><b>{novel.total_words || "Đang cập nhật"}</b></div>
+            <div><span>Cập nhật</span><b>{novel.updated_at ? new Date(novel.updated_at).toLocaleDateString("vi-VN") : "Mới nhất"}</b></div>
           </div>
         </div>
       </section>

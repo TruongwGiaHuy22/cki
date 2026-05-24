@@ -272,16 +272,22 @@ export default function ChapterReader() {
       </div>
 
       {/* FOOTER INFO */}
-      <div style={{
-        maxWidth: "800px",
-        margin: "2rem auto 0",
-        textAlign: "center",
-        fontSize: "0.85rem",
-        color: "#9ca3af",
-        paddingTop: "1rem"
-      }}>
-        <p>Chương {chapter.chapter_number} / {novel?.total_chapters || "?"} • {novel?.title || "Tiểu thuyết"}</p>
-      </div>
-    </div>
+<div style={{
+  maxWidth: "800px",
+  margin: "2rem auto 0",
+  textAlign: "center",
+  fontSize: "0.85rem",
+  color: "#9ca3af",
+  paddingTop: "1rem"
+}}>
+  <p>Chương {chapter.chapter_number} / {novel?.total_chapters || "?"} • {novel?.title || "Tiểu thuyết"}</p>
+  {/* 💡 THÊM DÒNG NÀY: Để hiển thị thời gian đăng chương */}
+  {chapter.created_at && (
+    <p style={{ fontSize: "0.8rem", marginTop: "0.25rem" }}>
+      Đăng lúc: {new Date(chapter.created_at).toLocaleString("vi-VN")}
+    </p>
+  )}
+</div>
+ </div>
   );
 }

@@ -56,6 +56,53 @@ async function list() {
 }
 
 /* =======================
+   SEARCH BY TITLE
+======================= */
+async function searchByTitle(keyword) {
+  if (!keyword || typeof keyword !== "string") return [];
+  
+  const searchTerm = keyword.trim();
+  if (searchTerm.length === 0) return [];
+
+  const [rows] = await pool.query(`
+    SELECT
+      q.idln,
+      q.title,
+      q.slug,
+      q.cover,
+      q.type,
+      q.author,
+      q.authordraw,
+      q.description,
+      q.statuss AS status,
+      q.age_limit,
+      q.total_chapters,
+      q.total_words,
+      q.view_count,
+      q.follow_count,
+      q.comment_count,
+      q.rating_avg,
+      q.rating_count,
+      q.active,
+      q.created_at,
+      q.updated_at,
+      GROUP_CONCAT(t.ten_tl ORDER BY t.ten_tl SEPARATOR '||') AS genres_raw
+    FROM QLTT q
+    LEFT JOIN truyen_theloai tt ON tt.idln = q.idln
+    LEFT JOIN theloai t ON t.id_tl = tt.id_tl
+    WHERE q.title LIKE ?
+    GROUP BY q.idln
+    ORDER BY q.title ASC
+    LIMIT 20
+  `, [`${searchTerm}%`]);
+
+  return rows.map(r => ({
+    ...r,
+    genres: r.genres_raw ? r.genres_raw.split("||").filter(Boolean) : []
+  }));
+}
+
+/* =======================
    LIST BY USER
 ======================= */
 async function listByUser(userId) {
@@ -111,7 +158,14 @@ async function getById(id) {
       q.authordraw,
       q.description,
       q.statuss AS status,
-      q.age_limit
+      q.age_limit,
+      /* 💡 BỔ SUNG THÊM CÁC TRƯỜNG NÀY ĐỂ FRONTEND HIỂN THỊ */
+      q.total_chapters,
+      q.total_words,
+      q.view_count AS views,      /* Alias lại thành views cho khớp novel.views ở Frontend */
+      q.rating_avg AS rating,     /* Alias lại thành rating cho khớp novel.rating ở Frontend */
+      q.created_at,
+      q.updated_at
     FROM QLTT q
     WHERE q.idln = ?
     LIMIT 1
@@ -129,6 +183,16 @@ async function getById(id) {
   `, [id]);
 
   novel.genres = genres.map(g => g.ten_tl);
+
+  // Tính tổng word_count từ tất cả chapters
+  const [totalWordsResult] = await pool.query(
+    "SELECT COALESCE(SUM(word_count), 0) as total_words FROM chapters WHERE idln = ?",
+    [id]
+  );
+  
+  if (totalWordsResult[0]) {
+    novel.total_words = totalWordsResult[0].total_words;
+  }
 
   return novel;
 }
@@ -268,12 +332,19 @@ async function detail(id) {
   // Lấy chapters cho mỗi volume
   for (let vol of volumes) {
     const [chapters] = await pool.query(
-      "SELECT chapter_id, title, chapter_number, content FROM chapters WHERE idln = ? AND volume_id = ? ORDER BY chapter_number ASC",
+      "SELECT chapter_id, title, chapter_number, content, word_count, created_at FROM chapters WHERE idln = ? AND volume_id = ? ORDER BY chapter_number ASC",
       [id, vol.volume_id]
     );
     vol.chapters = chapters;
   }
 
+  // Tính tổng word_count từ tất cả chapters
+  const [totalWordsResult] = await pool.query(
+    "SELECT COALESCE(SUM(word_count), 0) as total_words FROM chapters WHERE idln = ?",
+    [id]
+  );
+  
+  novel.total_words = totalWordsResult[0]?.total_words || 0;
   novel.volumes = volumes;
   return novel;
 }
@@ -357,6 +428,7 @@ async function deleteChapter(chapterId) {
 
 module.exports = {
   list,
+  searchByTitle,
   listByUser,
   getById,
   create,

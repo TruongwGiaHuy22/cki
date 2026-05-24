@@ -5,6 +5,20 @@ import { useNavigate } from "react-router-dom";
 
 const API_BASE = "http://localhost:4000";
 
+// Hàm format ngày thành DD/MM/YYYY
+function formatDate(dateString) {
+  if (!dateString) return "";
+  try {
+    const date = new Date(dateString);
+    const day = String(date.getDate()).padStart(2, "0");
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
+  } catch {
+    return "";
+  }
+}
+
 export default function QuanLyTruyen() {
   const navigate = useNavigate();
 
@@ -600,6 +614,9 @@ export default function QuanLyTruyen() {
                                   {ch.title}
                                 </span>
                                 <span style={{ color: selectedChapter === currentChapterId ? "#dbeafe" : "#94a3b8", fontSize: "0.85rem", flexShrink: 0 }}>#{ch.chapter_number}</span>
+                                <span style={{ color: selectedChapter === currentChapterId ? "#cbd5e1" : "#94a3b8", fontSize: "0.85rem", flexShrink: 0, minWidth: "90px", textAlign: "right" }}>
+                                  {formatDate(ch.created_at)}
+                                </span>
                                 <button
                                   style={{
                                     padding: "0.3rem 0.6rem",

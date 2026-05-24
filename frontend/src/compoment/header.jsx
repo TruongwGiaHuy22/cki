@@ -9,6 +9,9 @@ export default function Header() {
   const [infoOpen, setInfoOpen] = useState(false);
   const [user, setUser] = useState(null);
   const [userDropdown, setUserDropdown] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
+  const [showSearchResults, setShowSearchResults] = useState(false);
 
   // Lấy user từ localStorage/sessionStorage
   useEffect(() => {
@@ -30,6 +33,32 @@ export default function Header() {
     sessionStorage.removeItem("user");
     setUser(null);
     navigate("/login");
+  };
+
+  // Tìm kiếm truyện
+  const handleSearch = async (value) => {
+    setSearchQuery(value);
+    if (value.trim().length === 0) {
+      setSearchResults([]);
+      setShowSearchResults(false);
+      return;
+    }
+    try {
+      const res = await fetch(`http://localhost:4000/api/novels/search?q=${encodeURIComponent(value)}`);
+      const json = await res.json();
+      setSearchResults(json.data || []);
+      setShowSearchResults(true);
+    } catch (err) {
+      console.error("Search error:", err);
+      setSearchResults([]);
+    }
+  };
+
+  const handleSelectResult = (novelId) => {
+    setSearchQuery("");
+    setSearchResults([]);
+    setShowSearchResults(false);
+    navigate(`/novel/${novelId}`);
   };
 
   const tabs = [
@@ -83,6 +112,17 @@ export default function Header() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  // Đóng search dropdown khi click bên ngoài
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (!e.target.closest(".search-box") && !e.target.closest(".search-results")) {
+        setShowSearchResults(false);
+      }
+    };
+    document.addEventListener("click", handleClickOutside);
+    return () => document.removeEventListener("click", handleClickOutside);
+  }, []);
+
   return (
     <header className={`header-main ${isHidden ? "header-hidden" : ""}`}>
       {/* TOP */}
@@ -94,11 +134,54 @@ export default function Header() {
         </nav>
 
         <div className="header-right">
-          <input
-            type="text"
-            placeholder="Tìm kiếm..."
-            className="search-box"
-          />
+          <div style={{ position: "relative", width: "220px" }}>
+            <input
+              type="text"
+              placeholder="Tìm kiếm..."
+              className="search-box"
+              value={searchQuery}
+              onChange={(e) => handleSearch(e.target.value)}
+              onFocus={() => searchResults.length > 0 && setShowSearchResults(true)}
+            />
+            {showSearchResults && searchResults.length > 0 && (
+              <div 
+                className="search-results"
+                style={{
+                position: "absolute",
+                top: "100%",
+                left: 0,
+                right: 0,
+                background: "#1a1d23",
+                border: "1px solid #242b36",
+                borderRadius: "0.5rem",
+                maxHeight: "300px",
+                overflowY: "auto",
+                zIndex: 1000,
+                marginTop: "0.5rem",
+                boxShadow: "0 4px 12px rgba(0,0,0,0.3)"
+              }}>
+                {searchResults.map((novel) => (
+                  <div
+                    key={novel.idln}
+                    onClick={() => handleSelectResult(novel.idln)}
+                    style={{
+                      padding: "0.75rem 1rem",
+                      cursor: "pointer",
+                      borderBottom: "1px solid #242b36",
+                      transition: "background 0.2s",
+                      color: "#c7d0db",
+                      fontSize: "0.9rem"
+                    }}
+                    onMouseOver={(e) => e.target.style.background = "#242b36"}
+                    onMouseOut={(e) => e.target.style.background = "transparent"}
+                  >
+                    <div style={{ fontWeight: "500" }}>{novel.title}</div>
+                    <div style={{ fontSize: "0.8rem", color: "#94a3b8" }}>{novel.author || "Ẩn danh"}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
           {user ? (
             <div className="user-menu" style={{position: 'relative'}}>
               <button

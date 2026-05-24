@@ -158,4 +158,14 @@ async function deleteChapter(req, res, next) {
   }
 }
 
-module.exports = { list, listByUser, getById, create, update, remove, detail, chapters, createVolume, createChapter, deleteVolume, deleteChapter };
+async function search(req, res, next) {
+  try {
+    const keyword = req.query.q || "";
+    const data = await service.searchByTitle(keyword);
+    res.json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { list, listByUser, getById, create, update, remove, detail, chapters, createVolume, createChapter, deleteVolume, deleteChapter, search };

@@ -1,5 +1,19 @@
 import { Link } from "react-router-dom";
 
+// Hàm format ngày thành DD/MM/YYYY
+function formatDate(dateString) {
+  if (!dateString) return "";
+  try {
+    const date = new Date(dateString);
+    const day = String(date.getDate()).padStart(2, "0");
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
+  } catch {
+    return "";
+  }
+}
+
 export default function ChapterList({ chapters = [], volumes = [] }) {
   // Đồng bộ cấu trúc dữ liệu theo database thực tế của bạn
   const groupedVolumes = Array.isArray(volumes) && volumes.length > 0
@@ -29,13 +43,18 @@ export default function ChapterList({ chapters = [], volumes = [] }) {
                 return (
                   <li key={uniqueChKey} style={{ margin: "0.4rem 0" }}>
                     {/* Đường dẫn link chuyển hướng sang trang đọc chương sử dụng chapter_id */}
-                    <Link 
-                      to={`/chapter/${currentChId}`} 
-                      className="chapterlist-text-blue-500"
-                      style={{ textDecoration: "none", color: "#3b82f6" }}
-                    >
-                      {ch.title || `Chương ${ch.chapter_number || (chIdx + 1)}`}
-                    </Link>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <Link 
+                        to={`/chapter/${currentChId}`} 
+                        className="chapterlist-text-blue-500"
+                        style={{ textDecoration: "none", color: "#3b82f6", flex: 1 }}
+                      >
+                        {ch.title || `Chương ${ch.chapter_number || (chIdx + 1)}`}
+                      </Link>
+                      <span style={{ fontSize: "0.85rem", color: "#94a3b8", marginLeft: "1rem", whiteSpace: "nowrap" }}>
+                        {formatDate(ch.created_at)}
+                      </span>
+                    </div>
                   </li>
                 );
               })}

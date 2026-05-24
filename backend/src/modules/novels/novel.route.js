@@ -4,7 +4,7 @@ const authRequired = require("../../middlewares/authRequired");
 
 const router = express.Router();
 
-
+router.get("/search", controller.search);
 router.get("/", controller.list);
 router.get("/my", authRequired, controller.listByUser);
 router.get("/:id", controller.detail);
