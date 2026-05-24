@@ -1635,7 +1635,6 @@ header,
 
 .noveldetail-meta p {
   margin: 0 0 0.45rem;
-  font-size: 1rem;
 }
 
 .noveldetail-stats {
@@ -1796,8 +1795,21 @@ header,
   border-radius: 0.3rem;
   font-weight: 700;
 }
-/* ============================ */
-/* quản lý truyện */ 
+
+/* ============================
+   Fix input không gõ được ở trang Đăng truyện */
+.dangtruyen-page input,
+.dangtruyen-page textarea,
+.dangtruyen-page select {
+  pointer-events: auto !important;
+  z-index: 1 !important;
+  position: relative;
+  background: #181c22;
+  color: #fff;
+}
+
+/* ============================
+   quản lý truyện */ 
 .ql-container {
   display: flex;
   height: 100vh;
@@ -1871,4 +1883,4 @@ header,
   padding: 6px 10px;
   margin-left: 10px;
   border-left: 2px solid #ccc;
-} 
+}

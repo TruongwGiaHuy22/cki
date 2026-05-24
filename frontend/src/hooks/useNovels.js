@@ -39,9 +39,10 @@ export function useNovels() {
         if (alive) {
           const mapped = (json.data || []).map((n) => ({
             ...n,
+            id: n.idln,
             genres: Array.isArray(n.genres) ? n.genres : [],
             chapters: Array.isArray(n.chapters) ? n.chapters : [],
-            cover: resolveCover(n.cover, n.id),
+            cover: resolveCover(n.cover, n.idln),
             author: n.author || n.authordraw || "Ẩn danh",
           }));
           setNovels(mapped);

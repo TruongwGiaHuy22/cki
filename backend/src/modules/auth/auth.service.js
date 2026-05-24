@@ -6,8 +6,9 @@ const { jwt: jwtConfig } = require("../../config/env");
 async function register(data) {
   const { username, email, password } = data;
 
+  // 1. Đổi 'id' thành 'user_id' cho đúng với tên cột trong DB của bạn
   const [existing] = await pool.query(
-    "SELECT id FROM dangnhap WHERE email = ? OR username = ? LIMIT 1",
+    "SELECT user_id FROM users WHERE email = ? OR username = ? LIMIT 1",
     [email, username]
   );
   if (existing.length) {
@@ -17,8 +18,10 @@ async function register(data) {
   }
 
   const passwordHash = await bcrypt.hash(password, 10);
+  
+  // 2. Đổi 'userpass' thành 'userpassword' cho đúng với DB
   const [result] = await pool.query(
-    "INSERT INTO dangnhap (username, email, userpass) VALUES (?, ?, ?)",
+    "INSERT INTO users (username, email, userpassword) VALUES (?, ?, ?)",
     [username, email, passwordHash]
   );
 
@@ -27,8 +30,10 @@ async function register(data) {
 
 async function login(data) {
   const { identifier, password } = data;
+  
+  // 3. Đổi 'id' thành 'user_id' và 'userpass' thành 'userpassword'
   const [rows] = await pool.query(
-    "SELECT id, username, email, userpass FROM dangnhap WHERE email = ? OR username = ? LIMIT 1",
+    "SELECT user_id, username, email, userpassword FROM users WHERE email = ? OR username = ? LIMIT 1",
     [identifier, identifier]
   );
 
@@ -40,24 +45,29 @@ async function login(data) {
 
   const user = rows[0];
   let ok = false;
-  if (typeof user.userpass === "string" && user.userpass.startsWith("$2")) {
-    ok = await bcrypt.compare(password, user.userpass);
+  
+  // 4. Kiểm tra mật khẩu bằng 'user.userpassword' thay vì 'user.userpass'
+  if (typeof user.userpassword === "string" && user.userpassword.startsWith("$2")) {
+    ok = await bcrypt.compare(password, user.userpassword);
   } else {
-    ok = password === user.userpass;
+    ok = password === user.userpassword;
   }
+  
   if (!ok) {
     const err = new Error("Bạn nhập sai mật khẩu");
     err.status = 401;
     throw err;
   }
 
-  const token = jwt.sign({ sub: user.id, email: user.email }, jwtConfig.secret, {
+  // 5. Sử dụng 'user.user_id' để tạo mã token JWT
+  const token = jwt.sign({ sub: user.user_id, email: user.email }, jwtConfig.secret, {
     expiresIn: jwtConfig.expiresIn,
   });
 
+  // 6. Trả về đúng thông tin user_id
   return {
     token,
-    user: { id: user.id, username: user.username, email: user.email },
+    user: { id: user.user_id, username: user.username, email: user.email },
   };
 }
 

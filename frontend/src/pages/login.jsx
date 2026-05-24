@@ -46,11 +46,13 @@ export default function LoginPage() {
         throw new Error(textMessage || "Đăng nhập thất bại");
       }
 
-      if (formData.remember) {
-        localStorage.setItem("token", data.data.token);
-      } else {
-        sessionStorage.setItem("token", data.data.token);
-      }
+        if (formData.remember) {
+          localStorage.setItem("token", data.data.token);
+          localStorage.setItem("user", JSON.stringify(data.data.user));
+        } else {
+          sessionStorage.setItem("token", data.data.token);
+          sessionStorage.setItem("user", JSON.stringify(data.data.user));
+        }
 
       setMessage("Đăng nhập thành công");
       window.location.href = "/";
