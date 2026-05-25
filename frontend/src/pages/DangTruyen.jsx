@@ -1,7 +1,7 @@
 // D:\allwweb\maulightnovel\frontend\src\pages\DangTruyen.jsx
 
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 
 const API_BASE = "http://localhost:4000";
 
@@ -17,6 +17,7 @@ function toSlug(input) {
 
 export default function DangTruyen() {
   const navigate = useNavigate();
+  const location = useLocation();
 
   // 1. Quản lý các State tập trung
   const [showLoginMsg, setShowLoginMsg] = useState(false);
@@ -122,8 +123,8 @@ export default function DangTruyen() {
   return (
     <div className="dangtruyen-page">
       <nav className="dangtruyen-topnav">
-        <button className="active" onClick={() => navigate("/dang-truyen")}>Thêm Truyện mới</button>
-        <button onClick={() => navigate("/quan-ly-truyen")}>Q.Lý truyện</button>
+        <button className={location.pathname === "/dang-truyen" ? "active" : ""} onClick={() => navigate("/dang-truyen")}>Thêm Truyện mới</button>
+        <button className={location.pathname === "/quan-ly-truyen" ? "active" : ""} onClick={() => navigate("/quan-ly-truyen")}>Q.Lý truyện</button>
         <button>Q.Lý Convert</button>
         <button>Q.Lý Sáng tác</button>
         <button>Q.Lý Trang</button>

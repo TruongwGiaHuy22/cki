@@ -1,7 +1,7 @@
 // D:\allwweb\maulightnovel\frontend\src\pages\QuanLyTruyen.jsx
 
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 
 const API_BASE = "http://localhost:4000";
 
@@ -21,6 +21,7 @@ function formatDate(dateString) {
 
 export default function QuanLyTruyen() {
   const navigate = useNavigate();
+  const location = useLocation();
 
   // Khởi tạo state mặc định
   const [novels, setNovels] = useState([]);
@@ -76,6 +77,14 @@ export default function QuanLyTruyen() {
 
   // 3. Mở xem chi tiết tập và chương của một bộ truyện
   async function openNovel(novel) {
+    // Nếu truyện đã được chọn, bấm lần thứ 2 thì deselect
+    if (selectedNovel?.idln === novel.idln) {
+      setSelectedNovel(null);
+      setDetail(null);
+      setSelectedChapter(null);
+      return;
+    }
+
     setSelectedNovel(novel);
     setSelectedChapter(null);
     try {
@@ -309,15 +318,15 @@ export default function QuanLyTruyen() {
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", background: "#0f1115", color: "#ffffff" }}>
+    <div className="dangtruyen-page" style={{ display: "flex", flexDirection: "column", minHeight: "100vh", background: "#f5f5f5", color: "#222222", padding: "0 1rem 1.5rem" }}>
       {/* NAVBAR */}
-      <nav style={{ display: "flex", gap: "0.5rem", padding: "1rem 1.5rem", background: "#1a1d23", borderBottom: "1px solid #242b36", flexWrap: "wrap" }}>
-        <button onClick={() => navigate("/dang-truyen")} style={{ padding: "0.6rem 1rem", background: "#d97706", color: "#ffffff", border: "none", borderRadius: "0.4rem", cursor: "pointer", fontWeight: "500" }}>Thêm Truyện mới</button>
-        <button onClick={() => navigate("/quan-ly-truyen")} style={{ padding: "0.6rem 1rem", background: "#2563eb", color: "#ffffff", border: "none", borderRadius: "0.4rem", cursor: "pointer", fontWeight: "500" }}>Q.Lý truyện</button>
-        <button style={{ padding: "0.6rem 1rem", background: "#2d333d", color: "#c7d0db", border: "none", borderRadius: "0.4rem", cursor: "pointer" }}>Q.Lý Convert</button>
-        <button style={{ padding: "0.6rem 1rem", background: "#2d333d", color: "#c7d0db", border: "none", borderRadius: "0.4rem", cursor: "pointer" }}>Q.Lý Sáng tác</button>
-        <button style={{ padding: "0.6rem 1rem", background: "#2d333d", color: "#c7d0db", border: "none", borderRadius: "0.4rem", cursor: "pointer" }}>Q.Lý Trang</button>
-        <button style={{ padding: "0.6rem 1rem", background: "#2d333d", color: "#c7d0db", border: "none", borderRadius: "0.4rem", cursor: "pointer" }}>Tiện ích</button>
+      <nav className="dangtruyen-topnav">
+        <button className={location.pathname === "/dang-truyen" ? "active" : ""} onClick={() => navigate("/dang-truyen")}>Thêm Truyện mới</button>
+        <button className={location.pathname === "/quan-ly-truyen" ? "active" : ""} onClick={() => navigate("/quan-ly-truyen")}>Q.Lý truyện</button>
+        <button>Q.Lý Convert</button>
+        <button>Q.Lý Sáng tác</button>
+        <button>Q.Lý Trang</button>
+        <button>Tiện ích</button>
       </nav>
 
       {/* MAIN LAYOUT */}
@@ -359,7 +368,7 @@ export default function QuanLyTruyen() {
         {/* RIGHT CONTENT - CHI TIẾT VOLUME & CHAPTER */}
         <div style={{ background: "#1a1d23", border: "1px solid #242b36", borderRadius: "0.75rem", padding: "1.5rem" }}>
           {!detail ? (
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "400px", color: "#94a3b8", fontSize: "1.1rem", textAlign: "center" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100px", color: "#94a3b8", fontSize: "1.1rem", textAlign: "center" }}>
               <p>📖 Chọn một truyện để quản lý tập và chương</p>
             </div>
           ) : (

@@ -1,6 +1,6 @@
 -- Run this SQL once in your MySQL database
 CREATE TABLE IF NOT EXISTS users (
-  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  user_id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   username VARCHAR(50) NOT NULL,
   email VARCHAR(120) NOT NULL UNIQUE,
   password_hash VARCHAR(255) NOT NULL,
@@ -14,4 +14,31 @@ CREATE TABLE IF NOT EXISTS novels (
   description TEXT,
   status ENUM('ongoing', 'completed') DEFAULT 'ongoing',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS comments (
+  comment_id INT PRIMARY KEY AUTO_INCREMENT,
+  user_id INT NOT NULL,
+  idln INT NOT NULL,
+  chapter_id INT NULL,
+  parent_id INT NULL,
+  content TEXT NOT NULL,
+  like_count INT DEFAULT 0,
+  status ENUM('Hiện', 'Ẩn', 'Spam') DEFAULT 'Hiện',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY(user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+  FOREIGN KEY(idln) REFERENCES QLTT(idln) ON DELETE CASCADE,
+  FOREIGN KEY(chapter_id) REFERENCES chapters(chapter_id) ON DELETE CASCADE,
+  FOREIGN KEY(parent_id) REFERENCES comments(comment_id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS comment_likes (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  comment_id INT NOT NULL,
+  user_id INT NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY unique_like (comment_id, user_id),
+  FOREIGN KEY(comment_id) REFERENCES comments(comment_id) ON DELETE CASCADE,
+  FOREIGN KEY(user_id) REFERENCES users(user_id) ON DELETE CASCADE
 );

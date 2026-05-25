@@ -2,6 +2,7 @@ import { Link, useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
 import ChapterList from "../compoment/chapterlist.jsx";
 import { useNovels } from "../hooks/useNovels";
+import Comments from "../compoment/Comments.jsx"; // Đã có import sẵn ở đây
 
 const API_BASE = "http://localhost:4000";
 const assets = import.meta.glob("../assets/*.{png,jpg,jpeg,webp,svg}", { eager: true });
@@ -93,7 +94,7 @@ export default function NovelDetail() {
       </section>
 
       <section className="noveldetail-section">
-        <h2>{firstVolume ? `Tập ${firstVolume.volumeNumber}` : "Tập 1"}</h2>
+        <h2>{novel.title}</h2>
         {((novel.chapters || []).length > 0 || (novel.volumes || []).length > 0) ? (
           <ChapterList chapters={novel.chapters} volumes={novel.volumes || []} />
         ) : (
@@ -101,7 +102,17 @@ export default function NovelDetail() {
         )}
       </section>
 
-      <Link to="/danhsach" className="noveldetail-back">← Quay lại danh sách truyện</Link>
+      {/* ======================================================== */}
+      {/* 💡 THÊM ĐOẠN KHỐI BÌNH LUẬN NÀY VÀO ĐỂ HIỂN THỊ LÊN TRANG */}
+      <section className="noveldetail-section" style={{ marginTop: "2rem" }}>
+        <h2>Bình luận bộ truyện</h2>
+        <Comments novelId={id} />
+      </section>
+      {/* ======================================================== */}
+
+      <Link to="/danhsach" className="noveldetail-back" style={{ display: "block", marginTop: "1.5rem" }}>
+        ← Quay lại danh sách truyện
+      </Link>
     </div>
   );
 }

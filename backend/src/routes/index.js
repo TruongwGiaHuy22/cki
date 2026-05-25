@@ -2,6 +2,7 @@ const express = require("express");
 const authRoutes = require("../modules/auth/auth.route");
 const novelRoutes = require("../modules/novels/novel.route");
 const chapterRoutes = require("../modules/chapters/chapter.route");
+const commentRoutes = require("../modules/comments/comment.route");
 const pool = require("../config/db");
 
 const router = express.Router();
@@ -9,6 +10,7 @@ const router = express.Router();
 router.use("/auth", authRoutes);
 router.use("/novels", novelRoutes);
 router.use("/chapters", chapterRoutes);
+router.use("/comments", commentRoutes);
 
 //
 // FIX: thêm API theloai trực tiếp ở đây

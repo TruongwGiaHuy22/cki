@@ -1,5 +1,6 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
+import logoImg from "../assets/ln.png";
 
 export default function Header() {
   const navigate = useNavigate();
@@ -127,7 +128,7 @@ export default function Header() {
     <header className={`header-main ${isHidden ? "header-hidden" : ""}`}>
       {/* TOP */}
       <div className="header-top">
-        <Link to="/" className="logo">LightNovelVN</Link>
+        <Link to="/" className="logo"><img src={logoImg} alt="LightNovelVN" style={{height: "40px"}} /></Link>
 
         <nav className="nav-main">
           <Link to="/">Trang chủ</Link>

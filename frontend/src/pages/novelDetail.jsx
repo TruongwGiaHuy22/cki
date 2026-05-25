@@ -1,5 +1,6 @@
 import { useParams, Link } from "react-router-dom";
 import { useEffect, useState } from "react";
+import Comments from "../compoment/Comments";
 
 export default function NovelDetail() {
   const { id } = useParams();
@@ -37,6 +38,8 @@ export default function NovelDetail() {
         ))}
       </ul>
       <Link to="/novels">← Quay lại danh sách truyện</Link>
+      
+      <Comments novelId={id} />
     </div>
   );
 }
