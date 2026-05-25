@@ -66,7 +66,7 @@ export default function Header() {
     { id: "sangtac", label: "Sáng tác", path: "/sangtac" },
     { id: "aidich", label: "AI dịch", path: "/ai" }, 
     { id: "xuatban", label: "Xuất bản", path: "/xuatban"},
-    { id: "thaouan", label: "Thảo luận" },
+    { id: "thaouan", label: "Thảo luận", path: "/forum/create" },
     { id: "danhsach", label: "Danh sách", path: "/danhsach" }, 
     { id: "thongtin", label: "Thông tin" }
   ];
@@ -265,29 +265,73 @@ export default function Header() {
                   className={`tab-btn-small ${activeTab === tab.id ? "active" : ""}`}
                 >
                   Thông tin {infoOpen ? "▴" : "▾"}
-                </button>
-                {infoOpen ? (
-                  <div className="header-info-menu">
-                    <button className="header-info-item" style={{width:'100%',background:'none',border:'none',color:'#fff',padding:'10px 20px',fontSize:'1rem',cursor:'pointer',textAlign:'left'}}
-                      onClick={() => {
-                        setActiveTab("thongtin"); setInfoOpen(false);
-                        if (!user) {
-                          window.alert('Bạn cần đăng nhập để đăng truyện!');
-                        } else {
-                          navigate('/dang-truyen');
-                        }
-                      }}
-                    >
-                      Đăng truyện
-                    </button>
-                    <div style={{borderTop:'1px solid #333',margin:'4px 0'}}></div>
-                    <button className="header-info-item" onClick={() => setInfoOpen(false)}>Giới thiệu</button>
-                    <button className="header-info-item" onClick={() => setInfoOpen(false)}>Góp ý - Báo lỗi</button>
-                    <button className="header-info-item" onClick={() => setInfoOpen(false)}>Chính sách bảo mật</button>
-                    <button className="header-info-item" onClick={() => setInfoOpen(false)}>Điều khoản sử dụng</button>
-                  </div>
-                ) : null}
-              </div>
+               </button>
+{infoOpen ? (
+  <div className="header-info-menu">
+    {/* Nút Đăng truyện */}
+    <button 
+      className="header-info-item" 
+      style={{width:'100%',background:'none',border:'none',color:'#fff',padding:'10px 20px',fontSize:'1rem',cursor:'pointer',textAlign:'left'}}
+      onClick={() => {
+        setActiveTab("thongtin"); 
+        setInfoOpen(false);
+        if (!user) {
+          window.alert('Bạn cần đăng nhập để đăng truyện!');
+        } else {
+          navigate('/dang-truyen');
+        }
+      }}
+    >
+      Đăng truyện
+    </button>
+    <div style={{borderTop:'1px solid #333',margin:'4px 0'}}></div>
+
+    {/* Nút Giới thiệu */}
+    <button 
+      className="header-info-item" 
+      onClick={() => {
+        setInfoOpen(false);
+        navigate('/introduction'); {/* Đã đồng bộ */}
+      }}
+    >
+      Giới thiệu
+    </button>
+
+    {/* Nút Góp ý - Báo lỗi */}
+    <button 
+      className="header-info-item" 
+      onClick={() => {
+        setInfoOpen(false);
+        navigate('/error-report'); {/* Đã đồng bộ */}
+      }}
+    >
+      Góp ý - Báo lỗi
+    </button>
+
+    {/* Nút Chính sách bảo mật */}
+    <button 
+      className="header-info-item" 
+      onClick={() => {
+        setInfoOpen(false);
+        navigate('/privacy-policy'); {/* Đã đồng bộ */}
+      }}
+    >
+      Chính sách bảo mật
+    </button>
+
+    {/* Nút Điều khoản sử dụng */}
+    <button 
+      className="header-info-item" 
+      onClick={() => {
+        setInfoOpen(false);
+        navigate('/terms-of-service'); {/* Đã đồng bộ */}
+      }}
+    >
+      Điều khoản sử dụng
+    </button>
+  </div>
+) : null}
+</div>
             );
           }
           // 👉 nếu có path → dùng Link

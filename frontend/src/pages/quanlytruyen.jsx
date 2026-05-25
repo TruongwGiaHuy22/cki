@@ -103,10 +103,22 @@ export default function QuanLyTruyen() {
     }
   }
 
-  // Tải lại dữ liệu truyện đang chọn sau khi thêm tập/chương
+  // Tải lại dữ liệu truyện đang chọn sau khi thêm tập/chương (GIỮ LẠI selectedChapter)
   async function reloadCurrentNovel() {
     if (!selectedNovel) return;
-    openNovel(selectedNovel);
+    try {
+      const res = await fetch(`${API_BASE}/api/novels/${selectedNovel.idln}`);
+      
+      if (!res.ok) {
+        throw new Error(`Server báo lỗi: ${res.status}`);
+      }
+      
+      const json = await res.json();
+      setDetail(json.data || json);
+      // ✅ KHÔNG RESET selectedChapter - giữ lại chapter đang chọn
+    } catch (err) {
+      console.error("Lỗi khi reload chi tiết truyện:", err);
+    }
   }
 
   // 4. Gọi API tạo Volume mới

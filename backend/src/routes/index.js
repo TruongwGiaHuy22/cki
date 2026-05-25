@@ -3,6 +3,7 @@ const authRoutes = require("../modules/auth/auth.route");
 const novelRoutes = require("../modules/novels/novel.route");
 const chapterRoutes = require("../modules/chapters/chapter.route");
 const commentRoutes = require("../modules/comments/comment.route");
+const forumRoutes = require("../modules/forum/forum.route"); // 1. Import route thảo luận vào đây
 const pool = require("../config/db");
 
 const router = express.Router();
@@ -11,6 +12,7 @@ router.use("/auth", authRoutes);
 router.use("/novels", novelRoutes);
 router.use("/chapters", chapterRoutes);
 router.use("/comments", commentRoutes);
+router.use("/forum", forumRoutes); // 2. Kích hoạt API thảo luận với tiền tố /forum
 
 //
 // FIX: thêm API theloai trực tiếp ở đây

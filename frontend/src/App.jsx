@@ -14,6 +14,11 @@ import DanhSachSangTac from "./pages/DanhSachSangtac.jsx";
 import DanhSachAI from "./pages/DanhSachAI.jsx";
 import DangTruyen from "./pages/DangTruyen.jsx";
 import QuanLyTruyen from "./pages/quanlytruyen.jsx";
+import Introduction from "./compoment/Introduction.jsx";
+import ErrorReport from "./compoment/ErrorReport.jsx";
+import TermsOfService from "./compoment/TermsOfService.jsx";
+import PrivacyPolicy from "./compoment/PrivacyPolicy.jsx";
+import ForumCreate from "./pages/ForumCreate.jsx";
 function AppLayout() {
   const location = useLocation();
   const isLoginPage = location.pathname === "/login";
@@ -35,6 +40,11 @@ function AppLayout() {
           <Route path="/xuatban" element={<XuatBan />} />
           <Route path="/dang-truyen" element={<DangTruyen />} />
           <Route path="/quan-ly-truyen" element={<QuanLyTruyen />} />
+          <Route path="/introduction" element={<Introduction />} />
+          <Route path="/error-report" element={<ErrorReport />} />
+          <Route path="/terms-of-service" element={<TermsOfService />} />
+          <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+          <Route path="/forum/create" element={<ForumCreate />} />
         </Routes>
       </main>
       {!isLoginPage && !isRegisterPage && <Footer />}
