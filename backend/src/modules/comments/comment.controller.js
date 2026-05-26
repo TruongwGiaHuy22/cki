@@ -97,10 +97,22 @@ async function likeComment(req, res, next) {
   }
 }
 
+async function getRecentComments(req, res, next) {
+  try {
+    const limit = Number(req.query.limit) || 3;
+
+    const data = await service.getRecentComments(limit);
+    res.json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   getCommentsByNovel,
   createComment,
   updateComment,
   deleteComment,
   likeComment,
+  getRecentComments,
 };

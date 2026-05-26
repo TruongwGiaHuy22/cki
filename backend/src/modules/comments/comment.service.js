@@ -261,10 +261,41 @@ async function likeComment(commentId, userId) {
   }
 }
 
+async function getRecentComments(limit = 3) {
+  try {
+    const [comments] = await pool.query(
+      `SELECT c.comment_id, c.user_id, c.idln, c.content, c.created_at,
+              u.username, 
+              q.title as novel_title
+       FROM comments c
+       LEFT JOIN users u ON c.user_id = u.user_id
+       LEFT JOIN QLTT q ON c.idln = q.idln
+       WHERE c.status = 'Hiện'
+       ORDER BY c.created_at DESC
+       LIMIT ?`,
+      [limit]
+    );
+
+    return comments.map(c => ({
+      id: c.comment_id,
+      user_id: c.user_id,
+      novel_id: c.idln,
+      content: c.content,
+      created_at: c.created_at,
+      user_name: c.username || 'Ẩn danh',
+      novel_title: c.novel_title || 'Không xác định'
+    }));
+  } catch (err) {
+    console.error("❌ Lỗi tại getRecentComments:", err.message);
+    throw new Error(`Error fetching recent comments: ${err.message}`);
+  }
+}
+
 module.exports = {
   getCommentsByNovel,
   createComment,
   updateComment,
   deleteComment,
   likeComment,
+  getRecentComments,
 };

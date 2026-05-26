@@ -5,6 +5,9 @@ const optionalAuth = require("../../middlewares/optionalAuth");
 
 const router = express.Router();
 
+// GET recent comments (không cần auth)
+router.get("/recent", controller.getRecentComments);
+
 // GET comments của một truyện (optionalAuth - cho phép xác định người dùng nếu đã đăng nhập)
 router.get("/novel/:idln", optionalAuth, controller.getCommentsByNovel);
 

@@ -75,6 +75,23 @@ async function remove(req, res, next) {
     if (isNaN(id) || id <= 0) {
       return res.status(400).json({ success: false, message: "Invalid novel ID" });
     }
+    
+    // Check ownership - chỉ tác giả mới được xóa
+    const userId = Number(req.user?.sub);
+    console.log(`🔍 DELETE novel ${id} - userId: ${userId}`);
+    
+    const novel = await service.getById(id);
+    console.log(`🔍 Novel found:`, novel?.idln, `created_by:`, novel?.created_by);
+    
+    if (!novel) {
+      return res.status(404).json({ success: false, message: "Novel not found" });
+    }
+    
+    if (novel.created_by !== userId) {
+      console.log(`❌ Unauthorized: novel.created_by (${novel.created_by}) !== userId (${userId})`);
+      return res.status(403).json({ success: false, message: "Unauthorized: Bạn không có quyền xóa truyện này" });
+    }
+    
     const ok = await service.remove(id);
     if (!ok) return res.status(404).json({ success: false, message: "Novel not found" });
     res.json({ success: true, message: "Deleted" });

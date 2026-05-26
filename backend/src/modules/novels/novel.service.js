@@ -39,6 +39,7 @@ async function list() {
       q.rating_avg,
       q.rating_count,
       q.active,
+      q.created_by,
       q.created_at,
       q.updated_at,
       GROUP_CONCAT(t.ten_tl ORDER BY t.ten_tl SEPARATOR '||') AS genres_raw
@@ -126,6 +127,7 @@ async function listByUser(userId) {
       q.rating_avg,
       q.rating_count,
       q.active,
+      q.created_by,
       q.created_at,
       q.updated_at,
       GROUP_CONCAT(t.ten_tl ORDER BY t.ten_tl SEPARATOR '||') AS genres_raw
@@ -165,6 +167,7 @@ async function getById(id) {
       q.view_count AS views,      /* Alias lại thành views cho khớp novel.views ở Frontend */
       q.rating_avg AS rating,     /* Alias lại thành rating cho khớp novel.rating ở Frontend */
       q.rating_count,
+      q.created_by,
       q.created_at,
       q.updated_at
     FROM QLTT q
@@ -310,11 +313,49 @@ async function update(id, data) {
    REMOVE
 ======================= */
 async function remove(id) {
-  const [res] = await pool.query(
-    "DELETE FROM QLTT WHERE idln = ?",
-    [id]
-  );
-  return res.affectedRows > 0;
+  try {
+    // Disable foreign key checks để xóa dễ dàng
+    await pool.query("SET FOREIGN_KEY_CHECKS=0");
+    
+    // 1. Lấy tất cả volume_id của truyện này
+    const [volumes] = await pool.query(
+      "SELECT volume_id FROM volumes WHERE idln = ?",
+      [id]
+    );
+    
+    // 2. Xóa tất cả chapters của truyện này
+    await pool.query("DELETE FROM chapters WHERE idln = ?", [id]);
+    
+    // 3. Xóa tất cả volumes của truyện này
+    await pool.query("DELETE FROM volumes WHERE idln = ?", [id]);
+    
+    // 4. Xóa tất cả comments của truyện này
+    await pool.query("DELETE FROM comments WHERE idln = ?", [id]);
+    
+    // 5. Xóa tất cả ratings của truyện này
+    await pool.query("DELETE FROM ratings WHERE idln = ?", [id]);
+    
+    // 6. Xóa reading_history của truyện này
+    await pool.query("DELETE FROM reading_history WHERE idln = ?", [id]);
+    
+    // 7. Xóa genre mappings của truyện này
+    await pool.query("DELETE FROM truyen_theloai WHERE idln = ?", [id]);
+    
+    // 8. Cuối cùng xóa truyện
+    const [res] = await pool.query(
+      "DELETE FROM QLTT WHERE idln = ?",
+      [id]
+    );
+    
+    // Re-enable foreign key checks
+    await pool.query("SET FOREIGN_KEY_CHECKS=1");
+    
+    return res.affectedRows > 0;
+  } catch (err) {
+    // Ensure foreign keys are re-enabled even if error
+    await pool.query("SET FOREIGN_KEY_CHECKS=1");
+    throw err;
+  }
 }
 
 /* =======================
