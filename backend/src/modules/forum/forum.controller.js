@@ -51,7 +51,8 @@ exports.getPostById = async (req, res) => {
 
 exports.getComments = async (req, res) => {
   try {
-    const comments = await forumService.getCommentsByPostId(req.params.id);
+    const userId = req.user?.sub || null; // Lấy userId từ token
+    const comments = await forumService.getCommentsByPostId(req.params.id, userId);
     return res.json({ success: true, data: comments || [] });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
@@ -60,14 +61,27 @@ exports.getComments = async (req, res) => {
 
 exports.createComment = async (req, res) => {
   try {
+    console.log("=== CREATE COMMENT ===");
+    console.log("req.user:", req.user);
     const user_id = req.user?.sub;
     const { post_id, parent_id, content } = req.body;
+    
+    console.log("user_id:", user_id);
+    console.log("post_id:", post_id);
+    console.log("content:", content);
 
     if (!user_id) {
+      console.log("❌ Không có user_id");
       return res.status(401).json({ success: false, message: "Vui lòng đăng nhập!" });
     }
 
+    if (!post_id) {
+      console.log("❌ Không có post_id");
+      return res.status(400).json({ success: false, message: "Thiếu post_id!" });
+    }
+
     if (!content || content.trim() === "") {
+      console.log("❌ Content trống");
       return res.status(400).json({ success: false, message: "Nội dung trống!" });
     }
 
@@ -78,8 +92,10 @@ exports.createComment = async (req, res) => {
       content 
     });
 
+    console.log("✅ Comment tạo thành công:", comment);
     return res.status(201).json({ success: true, data: comment });
   } catch (err) {
+    console.error("❌ Lỗi createComment:", err);
     return res.status(500).json({ success: false, message: err.message });
   }
 };
@@ -126,6 +142,43 @@ exports.deletePost = async (req, res) => {
     }
 
     return res.json({ success: true, message: "Bài viết đã được xóa!" });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+exports.deleteComment = async (req, res) => {
+  try {
+    const user_id = req.user?.sub;
+    const { id } = req.params;
+
+    if (!user_id) {
+      return res.status(401).json({ success: false, message: "Bạn cần đăng nhập!" });
+    }
+
+    const result = await forumService.deleteComment(id, user_id);
+    
+    if (!result) {
+      return res.status(403).json({ success: false, message: "Bạn không có quyền xóa bình luận này!" });
+    }
+
+    return res.json({ success: true, message: "Bình luận đã được xóa!" });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+exports.likeComment = async (req, res) => {
+  try {
+    const user_id = req.user?.sub;
+    const { id } = req.params;
+
+    if (!user_id) {
+      return res.status(401).json({ success: false, message: "Bạn cần đăng nhập!" });
+    }
+
+    const result = await forumService.likeComment(id, user_id);
+    return res.json({ success: true, data: result });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
   }

@@ -5,6 +5,7 @@ const morgan = require("morgan");
 const { corsOrigin } = require("./config/env");
 const routes = require("./routes");
 const errorHandler = require("./middlewares/errorHandler");
+const db = require("./config/db");
 
 const app = express();
 
@@ -12,6 +13,30 @@ app.use(helmet());
 app.use(cors({ origin: corsOrigin }));
 app.use(express.json());
 app.use(morgan("dev"));
+
+// Auto-initialize required tables
+const initializeTables = async () => {
+  try {
+    // Create forum_comment_likes table if not exists
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS forum_comment_likes (
+        id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        comment_id INT NOT NULL,
+        user_id INT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY unique_forum_like (comment_id, user_id),
+        FOREIGN KEY (comment_id) REFERENCES forum_comments(comment_id) ON DELETE CASCADE,
+        FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+      )
+    `);
+    console.log("✅ forum_comment_likes table initialized");
+  } catch (err) {
+    console.warn("⚠️ Could not initialize forum_comment_likes:", err.message);
+  }
+};
+
+// Initialize tables on app start
+initializeTables();
 
 app.get("/health", (req, res) => {
   res.json({ success: true, message: "Backend is running" });

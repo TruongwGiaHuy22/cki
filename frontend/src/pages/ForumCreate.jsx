@@ -1,5 +1,55 @@
 import React, { useState, useEffect } from "react";
 
+// Hàm đếm tổng số bình luận (bao gồm cả reply)
+function countComments(comments) {
+  let count = 0;
+  for (const comment of comments) {
+    count += 1;
+    if (Array.isArray(comment.replies) && comment.replies.length > 0) {
+      count += countComments(comment.replies);
+    }
+  }
+  return count;
+}
+
+// ========================================================
+// 💡 SUB-COMPONENT: Ô NHẬP TRẢ LỜI ĐỘC LẬP 
+// ========================================================
+function ForumReplyForm({ commentId, submitting, onSubmit, onCancel }) {
+  const [text, setText] = useState("");
+
+  return (
+    <div className="reply-form-wrapper">
+      <textarea
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        placeholder="Nhập trả lời của bạn..."
+        rows="3"
+        disabled={submitting}
+        autoFocus
+      />
+      <div className="reply-form-buttons">
+        <button
+          onClick={() => onSubmit(commentId, text)}
+          disabled={submitting || !text.trim()}
+          className="reply-submit-btn"
+        >
+          {submitting ? "⏳ Đang gửi..." : "📤 Gửi"}
+        </button>
+        <button
+          onClick={onCancel}
+          className="reply-cancel-btn"
+        >
+          Hủy
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ========================================================
+// MAIN COMPONENT: QUẢN LÝ BÀI VIẾT VÀ BÌNH LUẬN FORUM
+// ========================================================
 export default function ForumCreate() {
   const ITEMS_PER_PAGE = 12;
   
@@ -20,6 +70,15 @@ export default function ForumCreate() {
   const [editContent, setEditContent] = useState("");
   const [editCategory, setEditCategory] = useState("");
   const [currentUser, setCurrentUser] = useState(null);
+
+  // State cho xem chi tiết bài viết và bình luận
+  const [viewingPost, setViewingPost] = useState(null);
+  const [comments, setComments] = useState([]);
+  const [commentContent, setCommentContent] = useState("");
+  const [commentsLoading, setCommentsLoading] = useState(false);
+  const [expandedReplies, setExpandedReplies] = useState(new Set());
+  const [replyingTo, setReplyingTo] = useState(null);
+  const [submittingComment, setSubmittingComment] = useState(false);
 
   // Hàm lấy Token an toàn
   const getToken = () => localStorage.getItem("token") || sessionStorage.getItem("token");
@@ -55,7 +114,6 @@ export default function ForumCreate() {
       if (response.ok) {
         setPosts(result.data || []);
       } else {
-        // Chỉ log lỗi, không alert để tránh gây khó chịu khi list rỗng
         console.warn("Server phản hồi:", result.message);
         setPosts([]); 
       }
@@ -68,7 +126,7 @@ export default function ForumCreate() {
 
   useEffect(() => {
     fetchPosts();
-    setCurrentPage(1); // Reset về trang 1 khi đổi category
+    setCurrentPage(1);
   }, [currentCategory]);
 
   const handleSubmitPost = async (e) => {
@@ -108,7 +166,6 @@ export default function ForumCreate() {
     }
   };
 
-  // Hàm xóa bài viết
   const handleDeletePost = async (postId) => {
     if (!window.confirm("Bạn chắc chắn muốn xóa bài viết này?")) return;
 
@@ -140,7 +197,6 @@ export default function ForumCreate() {
     }
   };
 
-  // Hàm chỉnh sửa bài viết
   const handleUpdatePost = async (e) => {
     e.preventDefault();
     const token = getToken();
@@ -179,7 +235,6 @@ export default function ForumCreate() {
     }
   };
 
-  // Mở form edit
   const startEditing = (post) => {
     setEditingPostId(post.post_id);
     setEditTitle(post.title);
@@ -187,14 +242,298 @@ export default function ForumCreate() {
     setEditCategory(post.category);
   };
 
-  // ... (Phần formatDate và return giữ nguyên như cũ)
-  // Lưu ý: Đảm bảo phần render dùng post.post_id làm key như code cũ của bạn
-
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString('vi-VN', {
       year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
     });
   };
+
+  const formatRelativeTime = (dateString) => {
+    const now = new Date();
+    const date = new Date(dateString);
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / (1000 * 60));
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+    if (diffMins < 1) return "vừa xong";
+    if (diffMins < 60) return `${diffMins}p trước`;
+    if (diffHours < 24) return `${diffHours}h trước`;
+    if (diffDays < 30) return `${diffDays} ngày trước`;
+    
+    return formatDate(dateString);
+  };
+
+  const viewPostDetail = async (post) => {
+    setViewingPost(post);
+    setComments([]);
+    setCommentContent("");
+    setExpandedReplies(new Set());
+    setReplyingTo(null);
+    setCommentsLoading(true);
+    
+    try {
+      const token = getToken();
+      const response = await fetch(`http://localhost:4000/api/forum/posts/${post.post_id}/comments`, {
+        headers: token ? { "Authorization": `Bearer ${token}` } : {}
+      });
+      if (response.ok) {
+        const result = await response.json();
+        setComments(result.data || []);
+      } else {
+        setComments([]);
+      }
+    } catch (error) {
+      console.error("Lỗi tải bình luận:", error);
+      setComments([]);
+    } finally {
+      setCommentsLoading(false);
+    }
+  };
+
+  const handleCreateComment = async (e) => {
+    e.preventDefault();
+    if (!commentContent.trim()) {
+      alert("Vui lòng nhập nội dung bình luận!");
+      return;
+    }
+
+    const token = getToken();
+    if (!token) {
+      alert("Vui lòng đăng nhập để bình luận!");
+      return;
+    }
+
+    try {
+      setSubmittingComment(true);
+      console.log("Gửi bình luận:", { post_id: viewingPost.post_id, content: commentContent });
+      
+      const response = await fetch(`http://localhost:4000/api/forum/comments`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+        body: JSON.stringify({ 
+          post_id: viewingPost.post_id, 
+          content: commentContent,
+          parent_id: null 
+        }),
+      });
+
+      console.log("Response status:", response.status);
+      const result = await response.json();
+      console.log("Response result:", result);
+
+      if (response.status === 201 || response.ok || result.success) {
+        setCommentContent("");
+        await viewPostDetail(viewingPost);
+        alert("✅ Bình luận thành công!");
+      } else {
+        alert("❌ Lỗi: " + (result.message || "Không thể tạo bình luận"));
+      }
+    } catch (error) {
+      console.error("Lỗi chi tiết:", error);
+      alert("❌ Lỗi kết nối server: " + error.message);
+    } finally {
+      setSubmittingComment(false);
+    }
+  };
+
+  const handleSubmitReply = async (targetId, replyContent) => {
+    if (!currentUser) {
+      alert("Vui lòng đăng nhập để trả lời");
+      return;
+    }
+    if (!replyContent || !replyContent.trim()) {
+      alert("Vui lòng nhập nội dung trả lời");
+      return;
+    }
+
+    try {
+      setSubmittingComment(true);
+      const token = getToken();
+
+      const response = await fetch(`http://localhost:4000/api/forum/comments`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          post_id: viewingPost.post_id,
+          content: replyContent.trim(),
+          parent_id: targetId
+        })
+      });
+
+      const result = await response.json();
+      if (response.ok || result.success) {
+        setReplyingTo(null);
+        await viewPostDetail(viewingPost);
+        
+        const newExpanded = new Set(expandedReplies);
+        newExpanded.add(targetId);
+        setExpandedReplies(newExpanded);
+      } else {
+        alert("❌ Lỗi: " + (result.message || "Không thể gửi trả lời"));
+      }
+    } catch (err) {
+      console.error("Lỗi gửi trả lời:", err);
+      alert("Có lỗi xảy ra khi kết nối đến máy chủ.");
+    } finally {
+      setSubmittingComment(false);
+    }
+  };
+
+  const handleLikeComment = async (commentId) => {
+    if (!currentUser) {
+      alert("Vui lòng đăng nhập để thích bình luận");
+      return;
+    }
+    try {
+      const token = getToken();
+      if (!token) {
+        alert("Vui lòng đăng nhập!");
+        return;
+      }
+
+      const response = await fetch(`http://localhost:4000/api/forum/comments/${commentId}/like`, {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}` 
+        }
+      });
+
+      const result = await response.json();
+      
+      if (response.ok && result.success) {
+        // Refresh comments để update like_count
+        await viewPostDetail(viewingPost);
+      } else {
+        console.error("Like error:", result.message);
+        alert("❌ Không thể thích bình luận: " + (result.message || "Lỗi không xác định"));
+      }
+    } catch (err) {
+      console.error("Lỗi thích bình luận:", err);
+      alert("❌ Lỗi kết nối: " + err.message);
+    }
+  };
+
+  const handleDeleteComment = async (commentId) => {
+    if (!window.confirm("Bạn chắc chắn muốn xóa bình luận này?")) return;
+
+    const token = getToken();
+    if (!token) {
+      alert("Vui lòng đăng nhập!");
+      return;
+    }
+
+    try {
+      const response = await fetch(`http://localhost:4000/api/forum/comments/${commentId}`, {
+        method: "DELETE",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+        },
+      });
+
+      const result = await response.json();
+
+      if (response.ok || result.success) {
+        alert("✅ Bình luận đã được xóa!");
+        await viewPostDetail(viewingPost);
+      } else {
+        alert("❌ Lỗi: " + (result.message || "Không thể xóa bình luận"));
+      }
+    } catch (error) {
+      console.error("Lỗi:", error);
+      alert("❌ Lỗi kết nối server");
+    }
+  };
+
+  const toggleReplies = (commentId) => {
+    const newExpanded = new Set(expandedReplies);
+    if (newExpanded.has(commentId)) {
+      newExpanded.delete(commentId);
+    } else {
+      newExpanded.add(commentId);
+    }
+    setExpandedReplies(newExpanded);
+  };
+
+  // Component hiển thị một bình luận
+  const ForumCommentItem = ({ comment, isReply = false }) => (
+    <div className={`comment-item ${isReply ? 'reply' : ''}`}>
+      <div className="comment-header">
+        <div className="comment-user-info">
+          <span className="comment-username">{comment.username}</span>
+          {comment.is_author && <span className="comment-badge author">CHỦ BÀI</span>}
+          {comment.role === "Administrator" && !comment.is_author && (
+            <span className="comment-badge creator">ADMIN</span>
+          )}
+        </div>
+        <span className="comment-time">{formatRelativeTime(comment.created_at)}</span>
+      </div>
+
+      <div className="comment-content">
+        {comment.content}
+      </div>
+
+      <div className="comment-actions">
+        <button 
+          onClick={() => handleLikeComment(comment.comment_id)} 
+          className={`comment-btn like-btn ${comment.user_liked ? 'liked' : ''}`}
+          title={comment.user_liked ? "Bỏ thích bình luận này" : "Thích bình luận này"}
+        >
+          <span>{comment.user_liked ? '❤️' : '👍'}</span>
+          <span>{comment.like_count || 0}</span>
+        </button>
+
+        <button
+          onClick={() => setReplyingTo(replyingTo === comment.comment_id ? null : comment.comment_id)}
+          className="comment-btn reply-btn"
+        >
+          💬 Trả lời
+        </button>
+
+        {comment.canDelete && (
+          <button
+            onClick={() => handleDeleteComment(comment.comment_id)}
+            title={(currentUser?.user_id || currentUser?.id) === comment.user_id ? "Xóa bình luận của bạn" : "Xóa bình luận (Quyền admin)"}
+            className="comment-btn delete-btn"
+          >
+            🗑️ Xóa
+          </button>
+        )}
+      </div>
+
+      {replyingTo === comment.comment_id && (
+        <ForumReplyForm
+          commentId={comment.comment_id}
+          submitting={submittingComment}
+          onSubmit={handleSubmitReply}
+          onCancel={() => setReplyingTo(null)}
+        />
+      )}
+
+      {Array.isArray(comment.replies) && comment.replies.length > 0 && (
+        <div className="replies-section">
+          <button onClick={() => toggleReplies(comment.comment_id)} className="replies-toggle-btn">
+            {expandedReplies.has(comment.comment_id) ? "▼" : "▶"} {comment.replies.length} trả lời
+          </button>
+
+          {expandedReplies.has(comment.comment_id) && (
+            <div className="replies-list">
+              {comment.replies.map((reply) => (
+                <ForumCommentItem key={reply.comment_id} comment={reply} isReply={true} />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
 
   // Tính toán phân trang
   const totalPages = Math.ceil(posts.length / ITEMS_PER_PAGE);
@@ -203,347 +542,312 @@ export default function ForumCreate() {
   const paginatedPosts = posts.slice(startIndex, endIndex);
 
   return (
-    <div style={styles.container}>
+    <div className="forum-container">
       
-      {/* 🧭 THANH CÔNG CỤ: CHUYỂN TAB CHUYÊN MỤC & NÚT ĐĂNG BÀI */}
-      <div style={styles.topBar}>
-        <div style={styles.categoryNav}>
-          {categories.map((cat) => (
-            <button
-              key={cat}
-              style={{ ...styles.catBtn, ...(currentCategory === cat ? styles.catBtnActive : {}) }}
-              onClick={() => {
-                setCurrentCategory(cat);
-                setShowCreateForm(false);
-              }}
-            >
-              {cat}
-            </button>
-          ))}
-        </div>
-        
-        <button 
-          style={{ ...styles.createBtn, background: showCreateForm ? "#ef4444" : "#3b82f6" }}
-          onClick={() => setShowCreateForm(!showCreateForm)}
-        >
-          {showCreateForm ? "❌ Hủy bỏ" : "➕ Thêm bài viết"}
-        </button>
-      </div>
+      {/* Nếu đang xem chi tiết bài viết */}
+      {viewingPost ? (
+        <>
+          <button
+            className="forum-submitBtn"
+            onClick={() => setViewingPost(null)}
+          >
+            ← Quay lại
+          </button>
 
-      {/* 📝 GIAO DIỆN TẠO BÀI VIẾT */}
-      {showCreateForm && (
-        <div style={styles.formBox}>
-          <h3 style={styles.formTitle}>Thảo luận / Bài viết</h3>
-          <form onSubmit={handleSubmitPost}>
-            <div style={styles.formGroup}>
-              <label style={styles.label}>Tiêu đề *</label>
-              <input 
-                type="text" 
-                style={styles.input} 
-                value={title} 
-                onChange={(e) => setTitle(e.target.value)} 
-                placeholder="Nhập tiêu đề bài viết..."
-                required 
-              />
+          <div className="forum-postDetailBox">
+            <div className="forum-postDetailHeader">
+              <h2 className="forum-postDetailTitle">{viewingPost.title}</h2>
+              <span className="forum-categoryTagDetail">[{viewingPost.category}]</span>
             </div>
 
-            <div style={styles.formGroup}>
-              <label style={styles.label}>Nội dung *</label>
-              <textarea 
-                style={styles.textarea} 
-                value={content} 
-                onChange={(e) => setContent(e.target.value)} 
-                placeholder="Nhập nội dung chi tiết bài viết tại đây..."
-                required 
-              />
+            <div className="forum-postDetailMeta">
+              <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+                <img src="https://via.placeholder.com/40" alt="avatar" className="forum-smallAvatar" />
+                <div>
+                  <div className="forum-authorNameDetail">{viewingPost.username}</div>
+                  {viewingPost.role === "Administrator" && (
+                    <span className="forum-adminBadgeDetail">Administrator</span>
+                  )}
+                </div>
+              </div>
+              <div className="forum-postDetailTime">
+                {formatDate(viewingPost.created_at)}
+              </div>
             </div>
 
-            <div style={styles.formGroup}>
-              <label style={styles.label}>Chuyên mục *</label>
-              <select 
-                style={styles.select} 
-                value={formCategory} 
-                onChange={(e) => setFormCategory(e.target.value)}
-              >
-                <option value="Thông báo">Thông báo</option>
-                <option value="Tin tức">Tin tức</option>
-                <option value="Hỏi đáp">Hỏi đáp</option>
-                <option value="Đánh giá">Đánh giá</option>
-                <option value="Thảo luận">Thảo luận</option>
-              </select>
+            <div className="forum-postDetailContent">
+              {viewingPost.content}
             </div>
 
-            <div style={{ textAlign: "left", marginTop: "1.5rem" }}>
-              <button type="submit" style={styles.submitBtn}>Thêm bài viết</button>
+            <div className="forum-postDetailStats">
+              <span>👁️ {viewingPost.view_count} lượt xem</span>
+              <span>💬 {countComments(comments)} bình luận</span>
             </div>
-          </form>
-        </div>
-      )}
+          </div>
 
-      {/* 🗂️ GIAO DIỆN DANH SÁCH BÀI VIẾT */}
-      {!showCreateForm && (
-        loading ? (
-          <div style={styles.centerText}>🔄 Đang tải các bài viết...</div>
-        ) : (
-          <>
-            {/* Form chỉnh sửa bài viết */}
-            {editingPostId && (
-              <div style={styles.formBox}>
-                <h3 style={styles.formTitle}>Chỉnh sửa bài viết</h3>
-                <form onSubmit={handleUpdatePost}>
-                  <div style={styles.formGroup}>
-                    <label style={styles.label}>Tiêu đề *</label>
-                    <input 
-                      type="text" 
-                      style={styles.input} 
-                      value={editTitle} 
-                      onChange={(e) => setEditTitle(e.target.value)} 
-                      required 
-                    />
-                  </div>
+          {/* 💬 PHẦN BÌNH LUẬN */}
+          <div className="forum-commentsSection">
+            <h3 className="forum-commentsTitle">💬 Bình luận ({countComments(comments)})</h3>
 
-                  <div style={styles.formGroup}>
-                    <label style={styles.label}>Nội dung *</label>
-                    <textarea 
-                      style={styles.textarea} 
-                      value={editContent} 
-                      onChange={(e) => setEditContent(e.target.value)} 
-                      required 
-                    />
-                  </div>
-
-                  <div style={styles.formGroup}>
-                    <label style={styles.label}>Chuyên mục *</label>
-                    <select 
-                      style={styles.select} 
-                      value={editCategory} 
-                      onChange={(e) => setEditCategory(e.target.value)}
-                    >
-                      <option value="Thông báo">Thông báo</option>
-                      <option value="Tin tức">Tin tức</option>
-                      <option value="Hỏi đáp">Hỏi đáp</option>
-                      <option value="Đánh giá">Đánh giá</option>
-                      <option value="Thảo luận">Thảo luận</option>
-                    </select>
-                  </div>
-
-                  <div style={{ display: "flex", gap: "1rem" }}>
-                    <button type="submit" style={styles.submitBtn}>Cập nhật bài viết</button>
-                    <button type="button" style={{...styles.submitBtn, background: "#64748b"}} onClick={() => setEditingPostId(null)}>Hủy</button>
-                  </div>
-                </form>
+            {currentUser ? (
+              <form onSubmit={handleCreateComment} className="forum-commentForm">
+                <textarea
+                  className="forum-commentInput"
+                  value={commentContent}
+                  onChange={(e) => setCommentContent(e.target.value)}
+                  placeholder="Chia sẻ cảm nghĩ của bạn..."
+                  disabled={submittingComment}
+                  rows="4"
+                />
+                <button type="submit" className="forum-submitCommentBtn" disabled={submittingComment || !commentContent.trim()}>
+                  {submittingComment ? "⏳ Đang gửi..." : "📤 Đăng bình luận"}
+                </button>
+              </form>
+            ) : (
+              <div className="forum-loginPrompt">
+                Vui lòng <a href="/login" style={{ color: "#3b82f6", textDecoration: "underline" }}>đăng nhập</a> để bình luận
               </div>
             )}
 
-            <div style={styles.listBox}>
-              {posts.length === 0 ? (
-                <div style={styles.centerText}>Chưa có bài viết nào thuộc chuyên mục này!</div>
+            <div className="comments-list">
+              {commentsLoading ? (
+                <div className="forum-centerText">Đang tải bình luận...</div>
+              ) : comments.length === 0 ? (
+                <div className="forum-centerText">Chưa có bình luận nào. Hãy là người đầu tiên! 🎉</div>
               ) : (
-                paginatedPosts.map((post) => (
-                  <div key={post.post_id} style={styles.postItem}>
-                    <div style={styles.postMain}>
-                      <div style={styles.titleWrapper}>
-                        {post.is_pinned === 1 && <span style={styles.pinIcon}>⭐</span>}
-                        <span style={styles.categoryTag}>[{post.category}]</span>
-                        <a href={`/forum/${post.post_id}`} style={styles.postTitle}>{post.title}</a>
-                      </div>
-                      <div style={styles.postMeta}>
-                        <span style={styles.authorName}>{post.username}</span>
-                        {post.role === "Administrator" && <span style={styles.adminBadge}>Admin</span>}
-                        <span style={styles.dot}>•</span>
-                        <span>{formatDate(post.created_at)}</span>
-                      </div>
-                    </div>
-
-                    <div style={styles.postActions}>
-                      <div style={styles.postStats}>
-                        <div style={styles.statBox}>
-                          <span style={styles.statNum}>{post.comment_count}</span>
-                          <span style={styles.statLabel}>Bình luận</span>
-                        </div>
-                        <div style={styles.statBox}>
-                          <span style={styles.statNum}>{post.view_count}</span>
-                          <span style={styles.statLabel}>Lượt xem</span>
-                        </div>
-                      </div>
-
-                      {currentUser && currentUser.id === post.user_id && (
-                        <div style={styles.actionButtons}>
-                          <button 
-                            style={styles.editBtn}
-                            onClick={() => startEditing(post)}
-                            title="Chỉnh sửa bài viết"
-                            onMouseEnter={(e) => e.target.style.background = "#ea580c"}
-                            onMouseLeave={(e) => e.target.style.background = "#f97316"}
-                          >
-                            ✏️ Sửa
-                          </button>
-                          <button 
-                            style={styles.deleteBtn}
-                            onClick={() => handleDeletePost(post.post_id)}
-                            title="Xóa bài viết"
-                            onMouseEnter={(e) => e.target.style.background = "#dc2626"}
-                            onMouseLeave={(e) => e.target.style.background = "#ef4444"}
-                          >
-                            🗑️ Xóa
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
+                comments.map((comment) => (
+                  <ForumCommentItem key={comment.comment_id} comment={comment} isReply={false} />
                 ))
               )}
             </div>
-
-            {/* 📄 PHÂN TRANG */}
-            {totalPages > 1 && (
-              <div style={styles.pagination}>
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="forum-topBar">
+            <div className="forum-categoryNav">
+              {categories.map((cat) => (
                 <button
-                  style={{...styles.pageBtn, opacity: currentPage === 1 ? 0.5 : 1, cursor: currentPage === 1 ? "not-allowed" : "pointer"}}
-                  onClick={() => setCurrentPage(currentPage - 1)}
-                  disabled={currentPage === 1}
+                  key={cat}
+                  className={`forum-catBtn ${currentCategory === cat ? "active" : ""}`}
+                  onClick={() => {
+                    setCurrentCategory(cat);
+                    setShowCreateForm(false);
+                  }}
                 >
-                  ← Trước
+                  {cat}
                 </button>
+              ))}
+            </div>
+            
+            <button 
+              className={`forum-createBtn ${showCreateForm ? "active" : ""}`}
+              onClick={() => setShowCreateForm(!showCreateForm)}
+            >
+              {showCreateForm ? "❌ Hủy bỏ" : "➕ Thêm bài viết"}
+            </button>
+          </div>
 
-                <div style={styles.pageNumbers}>
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                    <button
-                      key={page}
-                      style={{
-                        ...styles.pageNumber,
-                        ...(currentPage === page ? styles.pageNumberActive : {})
-                      }}
-                      onClick={() => setCurrentPage(page)}
-                    >
-                      {page}
-                    </button>
-                  ))}
+          {showCreateForm && (
+            <div className="forum-formBox">
+              <h3 className="forum-formTitle">Thảo luận / Bài viết</h3>
+              <form onSubmit={handleSubmitPost}>
+                <div className="forum-formGroup">
+                  <label className="forum-label">Tiêu đề *</label>
+                  <input 
+                    type="text" 
+                    className="forum-input" 
+                    value={title} 
+                    onChange={(e) => setTitle(e.target.value)} 
+                    placeholder="Nhập tiêu đề bài viết..."
+                    required 
+                  />
                 </div>
 
-                <button
-                  style={{...styles.pageBtn, opacity: currentPage === totalPages ? 0.5 : 1, cursor: currentPage === totalPages ? "not-allowed" : "pointer"}}
-                  onClick={() => setCurrentPage(currentPage + 1)}
-                  disabled={currentPage === totalPages}
-                >
-                  Sau →
-                </button>
-              </div>
-            )}
-          </>
-        )
+                <div className="forum-formGroup">
+                  <label className="forum-label">Nội dung *</label>
+                  <textarea 
+                    className="forum-textarea" 
+                    value={content} 
+                    onChange={(e) => setContent(e.target.value)} 
+                    placeholder="Nhập nội dung chi tiết bài viết tại đây..."
+                    required 
+                  />
+                </div>
+
+                <div className="forum-formGroup">
+                  <label className="forum-label">Chuyên mục *</label>
+                  <select 
+                    className="forum-select" 
+                    value={formCategory} 
+                    onChange={(e) => setFormCategory(e.target.value)}
+                  >
+                    <option value="Thông báo">Thông báo</option>
+                    <option value="Tin tức">Tin tức</option>
+                    <option value="Hỏi đáp">Hỏi đáp</option>
+                    <option value="Đánh giá">Đánh giá</option>
+                    <option value="Thảo luận">Thảo luận</option>
+                  </select>
+                </div>
+
+                <div style={{ textAlign: "left", marginTop: "1.5rem" }}>
+                  <button type="submit" className="forum-submitBtn">Thêm bài viết</button>
+                </div>
+              </form>
+            </div>
+          )}
+
+          {!showCreateForm && (
+            loading ? (
+              <div className="forum-centerText">🔄 Đang tải các bài viết...</div>
+            ) : (
+              <>
+                {editingPostId && (
+                  <div className="forum-formBox">
+                    <h3 className="forum-formTitle">Chỉnh sửa bài viết</h3>
+                    <form onSubmit={handleUpdatePost}>
+                      <div className="forum-formGroup">
+                        <label className="forum-label">Tiêu đề *</label>
+                        <input 
+                          type="text" 
+                          className="forum-input" 
+                          value={editTitle} 
+                          onChange={(e) => setEditTitle(e.target.value)} 
+                          required 
+                        />
+                      </div>
+
+                      <div className="forum-formGroup">
+                        <label className="forum-label">Nội dung *</label>
+                        <textarea 
+                          className="forum-textarea" 
+                          value={editContent} 
+                          onChange={(e) => setEditContent(e.target.value)} 
+                          required 
+                        />
+                      </div>
+
+                      <div className="forum-formGroup">
+                        <label className="forum-label">Chuyên mục *</label>
+                        <select 
+                          className="forum-select" 
+                          value={editCategory} 
+                          onChange={(e) => setEditCategory(e.target.value)}
+                        >
+                          <option value="Thông báo">Thông báo</option>
+                          <option value="Tin tức">Tin tức</option>
+                          <option value="Hỏi đáp">Hỏi đáp</option>
+                          <option value="Đánh giá">Đánh giá</option>
+                          <option value="Thảo luận">Thảo luận</option>
+                        </select>
+                      </div>
+
+                      <div style={{ display: "flex", gap: "1rem" }}>
+                        <button type="submit" className="forum-submitBtn">Cập nhật bài viết</button>
+                        <button type="button" style={{background: "#64748b"}} className="forum-submitBtn" onClick={() => setEditingPostId(null)}>Hủy</button>
+                      </div>
+                    </form>
+                  </div>
+                )}
+
+                <div className="forum-listBox">
+                  {posts.length === 0 ? (
+                    <div className="forum-centerText">Chưa có bài viết nào thuộc chuyên mục này!</div>
+                  ) : (
+                    paginatedPosts.map((post) => (
+                      <div key={post.post_id} className="forum-postItem">
+                        <div className="forum-postMain">
+                          <div className="forum-titleWrapper">
+                            {post.is_pinned === 1 && <span className="forum-pinIcon">⭐</span>}
+                            <span className="forum-categoryTag">[{post.category}]</span>
+                            <button
+                              className="forum-postTitle"
+                              onClick={() => viewPostDetail(post)}
+                              title="Xem chi tiết bài viết"
+                            >
+                              {post.title}
+                            </button>
+                          </div>
+                          <div className="forum-postMeta">
+                            <span className="forum-authorName">{post.username}</span>
+                            {post.role === "Administrator" && <span className="forum-adminBadge">Admin</span>}
+                            <span className="forum-dot">•</span>
+                            <span>{formatDate(post.created_at)}</span>
+                          </div>
+                        </div>
+
+                        <div className="forum-postActions">
+                          <div className="forum-postStats">
+                            <div className="forum-statBox">
+                              <span className="forum-statNum">{post.comment_count}</span>
+                              <span className="forum-statLabel">Bình luận</span>
+                            </div>
+                            <div className="forum-statBox">
+                              <span className="forum-statNum">{post.view_count}</span>
+                              <span className="forum-statLabel">Lượt xem</span>
+                            </div>
+                          </div>
+
+                          {currentUser && currentUser.id === post.user_id && (
+                            <div className="forum-actionButtons">
+                              <button 
+                                className="forum-editBtn"
+                                onClick={() => startEditing(post)}
+                                title="Chỉnh sửa bài viết"
+                              >
+                                ✏️ Sửa
+                              </button>
+                              <button 
+                                className="forum-deleteBtn"
+                                onClick={() => handleDeletePost(post.post_id)}
+                                title="Xóa bài viết"
+                              >
+                                🗑️ Xóa
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                {totalPages > 1 && (
+                  <div className="forum-pagination">
+                    <button
+                      className="forum-pageBtn"
+                      onClick={() => setCurrentPage(currentPage - 1)}
+                      disabled={currentPage === 1}
+                    >
+                      ← Trước
+                    </button>
+
+                    <div className="forum-pageNumbers">
+                      {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                        <button
+                          key={page}
+                          className={`forum-pageNumber ${currentPage === page ? "active" : ""}`}
+                          onClick={() => setCurrentPage(page)}
+                        >
+                          {page}
+                        </button>
+                      ))}
+                    </div>
+
+                    <button
+                      className="forum-pageBtn"
+                      onClick={() => setCurrentPage(currentPage + 1)}
+                      disabled={currentPage === totalPages}
+                    >
+                      Sau →
+                    </button>
+                  </div>
+                )}
+              </>
+            )
+          )}
+        </>
       )}
     </div>
   );
-}
-
-const styles = {
-  container: { maxWidth: "1100px", margin: "2rem auto", padding: "0 1rem", fontFamily: "system-ui, -apple-system, sans-serif", color: "#cbd5e1" },
-  topBar: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem", gap: "1rem" },
-  categoryNav: { display: "flex", gap: "0.5rem", flexWrap: "wrap" },
-  catBtn: { background: "#1f222a", color: "#94a3b8", border: "1px solid #2e3340", padding: "0.5rem 1rem", borderRadius: "0.375rem", cursor: "pointer", fontSize: "0.9rem", transition: "all 0.2s" },
-  catBtnActive: { background: "#3b82f6", color: "#ffffff", borderColor: "#3b82f6" },
-  createBtn: { color: "#fff", border: "none", padding: "0.5rem 1.25rem", borderRadius: "0.375rem", fontWeight: "600", cursor: "pointer", fontSize: "0.9rem", whiteSpace: "nowrap" },
-  formBox: { background: "#1f222a", padding: "2rem", borderRadius: "0.5rem", border: "1px solid #2e3340", marginBottom: "1.5rem" },
-  formTitle: { fontSize: "1.2rem", fontWeight: "bold", color: "#fff", marginBottom: "1.5rem" },
-  formGroup: { marginBottom: "1.25rem" },
-  label: { display: "block", marginBottom: "0.5rem", fontSize: "0.9rem", color: "#94a3b8" },
-  input: { width: "100%", background: "#181a20", border: "1px solid #2e3340", color: "#fff", padding: "0.7rem", borderRadius: "4px", outline: "none" },
-  textarea: { width: "100%", minHeight: "200px", background: "#181a20", border: "1px solid #2e3340", color: "#fff", padding: "0.7rem", borderRadius: "4px", outline: "none", resize: "vertical", fontFamily: "inherit" },
-  select: { width: "100%", background: "#181a20", border: "1px solid #2e3340", color: "#fff", padding: "0.7rem", borderRadius: "4px", outline: "none" },
-  submitBtn: { background: "#3b82f6", color: "#fff", border: "none", padding: "0.6rem 1.5rem", borderRadius: "4px", cursor: "pointer", fontWeight: "bold", fontSize: "0.95rem" },
-  listBox: { background: "#1f222a", border: "1px solid #2e3340", borderRadius: "0.5rem", overflow: "hidden" },
-  postItem: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "1rem 1.25rem", borderBottom: "1px solid #2e3340", gap: "1.5rem" },
-  postMain: { display: "flex", flexDirection: "column", gap: "0.4rem", flex: 1 },
-  titleWrapper: { display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" },
-  pinIcon: { color: "#eab308", fontSize: "1.1rem" },
-  categoryTag: { fontSize: "0.8rem", fontWeight: "700", color: "#60a5fa" },
-  postTitle: { fontSize: "1rem", fontWeight: "600", color: "#f8fafc", textDecoration: "none", lineHeight: "1.4" },
-  postMeta: { display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.85rem", color: "#64748b" },
-  authorName: { color: "#94a3b8", fontWeight: "500" },
-  adminBadge: { background: "rgba(239, 68, 68, 0.15)", color: "#ef4444", border: "1px solid rgba(239, 68, 68, 0.3)", padding: "0.05rem 0.4rem", borderRadius: "0.25rem", fontSize: "0.75rem" },
-  dot: { color: "#475569" },
-  postStats: { display: "flex", gap: "1.5rem", textAlign: "center" },
-  statBox: { display: "flex", flexDirection: "column", minWidth: "60px" },
-  statNum: { fontSize: "1.05rem", fontWeight: "700", color: "#f1f5f9" },
-  statLabel: { fontSize: "0.75rem", color: "#64748b", marginTop: "0.1rem" },
-  centerText: { textAlign: "center", padding: "3rem", color: "#64748b" },
-  postActions: { display: "flex", gap: "2rem", alignItems: "center", justifyContent: "flex-end" },
-  actionButtons: { display: "flex", gap: "0.75rem" },
-  editBtn: { 
-    background: "#f97316",
-    color: "#fff", 
-    border: "none", 
-    padding: "0.5rem 1rem", 
-    borderRadius: "4px", 
-    cursor: "pointer", 
-    fontSize: "0.9rem",
-    fontWeight: "600",
-    display: "flex",
-    alignItems: "center",
-    gap: "0.4rem",
-    transition: "all 0.2s",
-    whiteSpace: "nowrap"
-  },
-  deleteBtn: { 
-    background: "#ef4444",
-    color: "#fff", 
-    border: "none", 
-    padding: "0.5rem 1rem", 
-    borderRadius: "4px", 
-    cursor: "pointer", 
-    fontSize: "0.9rem",
-    fontWeight: "600",
-    display: "flex",
-    alignItems: "center",
-    gap: "0.4rem",
-    transition: "all 0.2s",
-    whiteSpace: "nowrap"
-  },
-  pagination: {
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
-    gap: "0.5rem",
-    marginTop: "2rem",
-    padding: "1.5rem",
-    background: "#1f222a",
-    borderRadius: "0.5rem",
-    border: "1px solid #2e3340"
-  },
-  pageBtn: {
-    background: "#3b82f6",
-    color: "#fff",
-    border: "none",
-    padding: "0.5rem 1rem",
-    borderRadius: "4px",
-    cursor: "pointer",
-    fontWeight: "600",
-    fontSize: "0.9rem",
-    transition: "all 0.2s"
-  },
-  pageNumbers: {
-    display: "flex",
-    gap: "0.5rem",
-    flexWrap: "wrap",
-    justifyContent: "center"
-  },
-  pageNumber: {
-    background: "#181a20",
-    color: "#94a3b8",
-    border: "1px solid #2e3340",
-    padding: "0.5rem 0.75rem",
-    borderRadius: "4px",
-    cursor: "pointer",
-    fontSize: "0.9rem",
-    fontWeight: "600",
-    transition: "all 0.2s",
-    minWidth: "2.5rem",
-    textAlign: "center"
-  },
-  pageNumberActive: {
-    background: "#3b82f6",
-    color: "#fff",
-    borderColor: "#3b82f6"
-  }
 };
