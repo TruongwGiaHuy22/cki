@@ -2,6 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
 const morgan = require("morgan");
+const path = require("path");
 const { corsOrigin } = require("./config/env");
 const routes = require("./routes");
 const errorHandler = require("./middlewares/errorHandler");
@@ -9,16 +10,29 @@ const db = require("./config/db");
 
 const app = express();
 
-app.use(helmet());
-app.use(cors({ origin: corsOrigin }));
+// CORS config - phải trước helmet
+const corsOptions = {
+  origin: corsOrigin,
+  credentials: true
+};
+app.use(cors(corsOptions));
+
+// Helmet với config cho phép static files
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" }
+}));
+
 app.use(express.json());
 app.use(morgan("dev"));
+
+// Serve static files từ thư mục uploads - PHẢI ĐẶT ĐẦU TIÊN
+app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 
 // Auto-initialize required tables
 const initializeTables = async () => {
   try {
     // Create forum_comment_likes table if not exists
-    await db.execute(`
+    await db.query(`
       CREATE TABLE IF NOT EXISTS forum_comment_likes (
         id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
         comment_id INT NOT NULL,

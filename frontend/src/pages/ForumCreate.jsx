@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 
 // Hàm đếm tổng số bình luận (bao gồm cả reply)
 function countComments(comments) {
@@ -52,11 +53,15 @@ function ForumReplyForm({ commentId, submitting, onSubmit, onCancel }) {
 // ========================================================
 export default function ForumCreate() {
   const ITEMS_PER_PAGE = 12;
+  const [searchParams, setSearchParams] = useSearchParams();
   
   const [posts, setPosts] = useState([]);
   const [currentCategory, setCurrentCategory] = useState("Tất cả");
   const [loading, setLoading] = useState(true);
-  const [currentPage, setCurrentPage] = useState(1);
+  const currentPage = Number(searchParams.get("page")) || 1;
+  const setCurrentPageUrl = (page) => {
+    setSearchParams({ page: page.toString() });
+  };
   const categories = ["Tất cả", "Thông báo", "Tin tức", "Hỏi đáp", "Đánh giá", "Thảo luận"];
 
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -126,7 +131,7 @@ export default function ForumCreate() {
 
   useEffect(() => {
     fetchPosts();
-    setCurrentPage(1);
+    setCurrentPageUrl(1);
   }, [currentCategory]);
 
   const handleSubmitPost = async (e) => {
@@ -816,7 +821,7 @@ export default function ForumCreate() {
                   <div className="forum-pagination">
                     <button
                       className="forum-pageBtn"
-                      onClick={() => setCurrentPage(currentPage - 1)}
+                      onClick={() => setCurrentPageUrl(currentPage - 1)}
                       disabled={currentPage === 1}
                     >
                       ← Trước
@@ -827,7 +832,7 @@ export default function ForumCreate() {
                         <button
                           key={page}
                           className={`forum-pageNumber ${currentPage === page ? "active" : ""}`}
-                          onClick={() => setCurrentPage(page)}
+                          onClick={() => setCurrentPageUrl(page)}
                         >
                           {page}
                         </button>
@@ -836,7 +841,7 @@ export default function ForumCreate() {
 
                     <button
                       className="forum-pageBtn"
-                      onClick={() => setCurrentPage(currentPage + 1)}
+                      onClick={() => setCurrentPageUrl(currentPage + 1)}
                       disabled={currentPage === totalPages}
                     >
                       Sau →

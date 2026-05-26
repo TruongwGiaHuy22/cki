@@ -35,6 +35,9 @@ export default function ChapterReader() {
 
         // Tính toán prev và next chapter
         calculateNavigation(chapterData, novelData);
+
+        // Lưu lịch sử đọc
+        saveReadingHistory(chapterData.idln, chapterData.chapter_id);
       } catch (err) {
         console.error("Lỗi:", err);
         setError(err.message || "Lỗi khi tải chương");
@@ -47,6 +50,25 @@ export default function ChapterReader() {
       fetchData();
     }
   }, [id]);
+
+  const saveReadingHistory = async (idln, chapter_id) => {
+    try {
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+      if (!token) return; // Không lưu nếu chưa đăng nhập
+
+      await fetch(`${API_BASE}/api/history`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ idln, chapter_id })
+      });
+    } catch (err) {
+      console.error("Lỗi lưu lịch sử:", err);
+      // Không hiển thị lỗi cho user, chỉ log
+    }
+  };
 
   const calculateNavigation = (chapterData, novelData) => {
     // Flatten tất cả chapters và tìm current chapter index

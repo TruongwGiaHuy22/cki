@@ -48,6 +48,40 @@
   font-size: 0.85rem;
 }
 
+/* ========================
+   READING HISTORY
+======================== */
+.reading-history-card {
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.reading-history-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+}
+
+.history-cover {
+  width: 100%;
+  aspect-ratio: 3/4;
+  object-fit: cover;
+  background-color: #e5e7eb;
+}
+
+.history-title {
+  font-weight: bold;
+  font-size: 0.9rem;
+  margin-top: 0.5rem;
+  display: -webkit-box;
+  line-clamp: 2;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
 .ai-desc {
   margin: 0 0 0.6rem;
   color: #c7d0db;
@@ -55,7 +89,7 @@
   line-height: 1.5;
   display: -webkit-box;
   -webkit-line-clamp: 3;
-  line-clamp: 1;
+  line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
@@ -2809,3 +2843,14 @@ header,
 .forum-commentActionBtn:hover {
   color: #f8fafc;
 } 
+
+/* lịch sử */ 
+/* ==================================================*/ 
+.history-container { padding: 20px; max-width: 800px; margin: auto; }
+.history-list { list-style: none; padding: 0; }
+.history-item { 
+  display: flex; justify-content: space-between; 
+  padding: 10px; border-bottom: 1px solid #ddd;
+}
+.history-item a { text-decoration: none; color: #333; }
+.history-item span { color: #888; font-size: 0.9em; }

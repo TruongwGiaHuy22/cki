@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { getImageUrl } from "../utils/imageUrl";
 
 const API_BASE = "http://localhost:4000";
 const assets = import.meta.glob("../assets/*.{png,jpg,jpeg,webp,svg}", { eager: true });
@@ -8,19 +9,12 @@ const assetByName = Object.fromEntries(
 );
 
 function resolveCover(cover, id) {
-  if (!cover) return assetByName["noname29.png"];
+  if (!cover) return getImageUrl("hero.png");
   const raw = String(cover).trim();
-  if (!raw) return assetByName["noname29.png"];
-  if (raw.startsWith("http")) return raw;
-
-  const file = raw.replace(/^\/+/, "").toLowerCase();
-  if (assetByName[file]) return assetByName[file];
-
-  const base = file.replace(/\.[^.]+$/, "");
-  const candidate = Object.keys(assetByName).find((name) => name.replace(/\.[^.]+$/, "") === base);
-  if (candidate) return assetByName[candidate];
-
-  return assetByName["noname29.png"];
+  if (!raw) return getImageUrl("hero.png");
+  
+  // Try backend URL first
+  return getImageUrl(raw);
 }
 
 export function useNovels() {

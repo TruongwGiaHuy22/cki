@@ -2,24 +2,22 @@ import { Link, useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
 import ChapterList from "../compoment/chapterlist.jsx";
 import { useNovels } from "../hooks/useNovels";
-import Comments from "../compoment/Comments.jsx"; // Đã có import sẵn ở đây
+import Comments from "../compoment/Comments.jsx";
 
 const API_BASE = "http://localhost:4000";
-const assets = import.meta.glob("../assets/*.{png,jpg,jpeg,webp,svg}", { eager: true });
-const assetByName = Object.fromEntries(
-  Object.entries(assets).map(([p, mod]) => [p.split("/").pop().toLowerCase(), mod.default])
-);
 
+// Hàm xử lý đường dẫn ảnh chuẩn
 function resolveCover(cover) {
-  if (!cover) return assetByName["noname29.png"];
-  const raw = String(cover).trim();
-  if (!raw) return assetByName["noname29.png"];
-  if (raw.startsWith("http")) return raw;
-  const file = raw.replace(/^\/+/, "").toLowerCase();
-  if (assetByName[file]) return assetByName[file];
-  const base = file.replace(/\.[^.]+$/, "");
-  const candidate = Object.keys(assetByName).find((name) => name.replace(/\.[^.]+$/, "") === base);
-  return candidate ? assetByName[candidate] : assetByName["noname29.png"];
+  // 1. Nếu không có ảnh, trả về ảnh mặc định trong thư mục public của frontend
+  if (!cover) return "/default-novel.png"; 
+
+  // 2. Nếu đã là đường dẫn đầy đủ từ internet (vd: từ các web khác)
+  if (cover.startsWith("http")) return cover;
+
+  // 3. Ghép tên file từ database với đường dẫn static của Backend
+  // Đảm bảo tên file không bắt đầu bằng dấu / thừa
+  const fileName = cover.replace(/^\/+/, "");
+  return `${API_BASE}/uploads/${fileName}`;
 }
 
 export default function NovelDetail() {
@@ -44,25 +42,28 @@ export default function NovelDetail() {
         if (alive) setLoading(false);
       }
     })();
-    return () => {
-      alive = false;
-    };
+    return () => { alive = false; };
   }, [id]);
 
   if (loading) return <div className="novelsdetail-p-4">Đang tải dữ liệu...</div>;
   if (error || listError) return <div className="novelsdetail-p-4">Lỗi: {error || listError}</div>;
   if (!novel) return <div className="novelsdetail-p-4">Không tìm thấy truyện.</div>;
 
+  // Lấy dữ liệu từ danh sách cache hoặc từ API chi tiết
   const fallbackNovel = novels.find((n) => Number(n.id) === Number(id));
   const coverSrc = resolveCover(novel.cover || fallbackNovel?.cover);
-  const firstVolume = (novel.volumes || [])[0];
 
   return (
     <div className="noveldetail-page">
       <section className="noveldetail-hero">
         <div className="noveldetail-cover-wrap">
           <div className="noveldetail-type-badge">{novel.type || "Truyện"}</div>
-          <img src={coverSrc} alt={novel.title} className="noveldetail-cover" />
+          <img 
+            src={coverSrc} 
+            alt={novel.title} 
+            className="noveldetail-cover"
+            onError={(e) => { e.target.src = "/default-novel.png"; }} // Nếu vẫn lỗi, hiển thị ảnh mặc định
+          />
         </div>
 
         <div className="noveldetail-main">
@@ -78,13 +79,6 @@ export default function NovelDetail() {
             <p><strong>Họa sĩ:</strong> {novel.authordraw || "Đang cập nhật"}</p>
             <p><strong>Tình trạng:</strong> {novel.status || "Đang cập nhật"}</p>
           </div>
-
-          <div className="noveldetail-stats">
-            <div><span>Lượt xem</span><b>{novel.views || "0"}</b></div>
-            <div><span>Đánh giá</span><b>{novel.rating || "0 / 0"}</b></div>
-            <div><span>Số từ</span><b>{novel.total_words || "Đang cập nhật"}</b></div>
-            <div><span>Cập nhật</span><b>{novel.updated_at ? new Date(novel.updated_at).toLocaleDateString("vi-VN") : "Mới nhất"}</b></div>
-          </div>
         </div>
       </section>
 
@@ -94,21 +88,18 @@ export default function NovelDetail() {
       </section>
 
       <section className="noveldetail-section">
-        <h2>{novel.title}</h2>
+        <h2>Danh sách chương</h2>
         {((novel.chapters || []).length > 0 || (novel.volumes || []).length > 0) ? (
           <ChapterList chapters={novel.chapters} volumes={novel.volumes || []} />
         ) : (
-          <p>Chưa có chương trong tập này.</p>
+          <p>Chưa có chương trong bộ truyện này.</p>
         )}
       </section>
 
-      {/* ======================================================== */}
-      {/* 💡 THÊM ĐOẠN KHỐI BÌNH LUẬN NÀY VÀO ĐỂ HIỂN THỊ LÊN TRANG */}
       <section className="noveldetail-section" style={{ marginTop: "2rem" }}>
         <h2>Bình luận bộ truyện</h2>
         <Comments novelId={id} />
       </section>
-      {/* ======================================================== */}
 
       <Link to="/danhsach" className="noveldetail-back" style={{ display: "block", marginTop: "1.5rem" }}>
         ← Quay lại danh sách truyện

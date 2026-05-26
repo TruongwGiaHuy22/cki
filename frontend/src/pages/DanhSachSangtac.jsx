@@ -1,14 +1,18 @@
 import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useNovels } from "../hooks/useNovels";
 
 export default function DanhSachSangTac() {
   const { novels, loading, error } = useNovels();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [selectedGenres, setSelectedGenres] = useState([]);
   const [selectedLetter, setSelectedLetter] = useState("ALL");
   const [selectedStatus, setSelectedStatus] = useState([]);
   const [appliedStatus, setAppliedStatus] = useState([]);
-  const [currentPage, setCurrentPage] = useState(1);
+  const currentPage = Number(searchParams.get("page")) || 1;
+  const setCurrentPage = (page) => {
+    setSearchParams({ page: page.toString() });
+  };
 
   const itemsPerPage = 13;
   const genres = ["Action","Adapted to Anime","Adapted to Drama CD","Adapted to Manga","Adapted to Manhua","Adapted to Manhwa","Adult","Adventure","Age Gap","Boys Love","Character Growth","Chinese Novel","Comedy","Cooking","Different Social Status","Drama","Ecchi","English Novel","Fanfiction","Fantasy","Female Protagonist","Game","Gender Bender","Harem","Historical","Horror","Incest","Isekai","Josei","Korean Novel","Magic","Martial Arts","Mature","Mecha","Military","Misunderstanding","Mystery","Netorare","One shot","Otome Game","Parody","Psychological","Reverse Harem","Romance","Satire","School Life","Science Fiction","Seinen","Shoujo","Shoujo ai","Shounen","Shounen ai","Slice of Life","Slow Life","Sports","Super Power","Supernatural","Suspense","Tragedy","Wars","Web Novel","Workplace","Wuxia","Xianxia","Yandere","Yuri"];

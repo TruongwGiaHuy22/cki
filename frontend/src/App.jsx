@@ -19,6 +19,7 @@ import ErrorReport from "./compoment/ErrorReport.jsx";
 import TermsOfService from "./compoment/TermsOfService.jsx";
 import PrivacyPolicy from "./compoment/PrivacyPolicy.jsx";
 import ForumCreate from "./pages/ForumCreate.jsx";
+import ReadingHistory from "./pages/ReadingHistory.jsx";
 function AppLayout() {
   const location = useLocation();
   const isLoginPage = location.pathname === "/login";
@@ -45,6 +46,7 @@ function AppLayout() {
           <Route path="/terms-of-service" element={<TermsOfService />} />
           <Route path="/privacy-policy" element={<PrivacyPolicy />} />
           <Route path="/forum/create" element={<ForumCreate />} />
+          <Route path="/history" element={<ReadingHistory />} />
         </Routes>
       </main>
       {!isLoginPage && !isRegisterPage && <Footer />}

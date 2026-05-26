@@ -84,3 +84,18 @@ CREATE TABLE IF NOT EXISTS forum_comment_likes (
   FOREIGN KEY (comment_id) REFERENCES forum_comments(comment_id) ON DELETE CASCADE,
   FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
 );
+
+-- ========================================================
+-- READING HISTORY TABLE
+-- ========================================================
+CREATE TABLE IF NOT EXISTS reading_history (
+  history_id INT PRIMARY KEY AUTO_INCREMENT,
+  user_id BIGINT UNSIGNED NOT NULL,
+  idln INT NOT NULL,
+  chapter_id INT NOT NULL,
+  last_read_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY unique_reading (user_id, idln, chapter_id),
+  FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+  FOREIGN KEY (idln) REFERENCES QLTT(idln) ON DELETE CASCADE,
+  FOREIGN KEY (chapter_id) REFERENCES chapters(chapter_id) ON DELETE CASCADE
+);

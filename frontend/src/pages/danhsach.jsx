@@ -1,9 +1,10 @@
 import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useNovels } from "../hooks/useNovels";
 
 export default function DanhSach() {
   const { novels, loading, error } = useNovels();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [selectedGenres, setSelectedGenres] = useState([]);
   const [selectedLetter, setSelectedLetter] = useState("ALL");
   const [sortOrder, setSortOrder] = useState("latest");
@@ -13,8 +14,12 @@ export default function DanhSach() {
   const [appliedTypes, setAppliedTypes] = useState([]);
   const [appliedStatus, setAppliedStatus] = useState([]);
 
-  const [currentPage, setCurrentPage] = useState(1);
+  const currentPage = Number(searchParams.get("page")) || 1;
   const itemsPerPage = 18;
+  
+  const setCurrentPage = (page) => {
+    setSearchParams({ page: page.toString() });
+  };
 
   const genres = [
     "Action", "Adapted to Anime", "Adapted to Drama CD", "Adapted to Manga", "Adapted to Manhua", "Adapted to Manhwa",
