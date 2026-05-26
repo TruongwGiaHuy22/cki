@@ -4,7 +4,8 @@ const novelRoutes = require("../modules/novels/novel.route");
 const chapterRoutes = require("../modules/chapters/chapter.route");
 const commentRoutes = require("../modules/comments/comment.route");
 const forumRoutes = require("../modules/forum/forum.route");
-const historyRoutes = require("../modules/history/history.route"); // 1. Import route mới
+const historyRoutes = require("../modules/history/history.route");
+const ratingRoutes = require("../modules/ratings/rating.route");
 const pool = require("../config/db");
 
 const router = express.Router();
@@ -14,7 +15,8 @@ router.use("/novels", novelRoutes);
 router.use("/chapters", chapterRoutes);
 router.use("/comments", commentRoutes);
 router.use("/forum", forumRoutes); 
-router.use("/history", historyRoutes); // 2. Kích hoạt route
+router.use("/history", historyRoutes);
+router.use("/ratings", ratingRoutes);
 
 // API theloai
 router.get("/theloai", async (req, res) => {

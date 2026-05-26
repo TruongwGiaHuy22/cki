@@ -1679,19 +1679,37 @@ header,
 }
 
 .noveldetail-stats {
-  margin-top: 1rem;
+  margin-top: 50px;
+  padding-top: 1rem;
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   border-top: 1px solid #2a303b;
 }
-.noveldetail-stats div {
-  padding: 0.85rem 0.5rem;
+
+.stat-item {
+  padding: 1rem 0.75rem;
   text-align: center;
   border-right: 1px solid #2a303b;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.5rem;
 }
-.noveldetail-stats div:last-child { border-right: none; }
-.noveldetail-stats span { display: block; color: #94a3b8; font-size: 0.9rem; }
-.noveldetail-stats b { font-size: 1.2rem; color: #f8fafc; }
+.stat-item:last-child { border-right: none; }
+.stat-number {
+  font-size: 1.6rem;
+  font-weight: bold;
+  color: #f8fafc;
+  display: block;
+  line-height: 1.2;
+}
+.stat-label {
+  color: #94a3b8;
+  font-size: 0.7rem;
+  display: block;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
 
 .noveldetail-section {
   margin-top: 1rem;

@@ -99,3 +99,18 @@ CREATE TABLE IF NOT EXISTS reading_history (
   FOREIGN KEY (idln) REFERENCES QLTT(idln) ON DELETE CASCADE,
   FOREIGN KEY (chapter_id) REFERENCES chapters(chapter_id) ON DELETE CASCADE
 );
+
+-- ========================================================
+-- RATINGS TABLE
+-- ========================================================
+CREATE TABLE IF NOT EXISTS ratings (
+  rating_id INT PRIMARY KEY AUTO_INCREMENT,
+  user_id BIGINT UNSIGNED NOT NULL,
+  idln INT NOT NULL,
+  rating INT NOT NULL CHECK(rating BETWEEN 1 AND 5),
+  review TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY unique_rating (user_id, idln),
+  FOREIGN KEY(user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+  FOREIGN KEY(idln) REFERENCES QLTT(idln) ON DELETE CASCADE
+);

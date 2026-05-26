@@ -164,6 +164,7 @@ async function getById(id) {
       q.total_words,
       q.view_count AS views,      /* Alias lại thành views cho khớp novel.views ở Frontend */
       q.rating_avg AS rating,     /* Alias lại thành rating cho khớp novel.rating ở Frontend */
+      q.rating_count,
       q.created_at,
       q.updated_at
     FROM QLTT q
@@ -329,6 +330,8 @@ async function detail(id) {
     [id]
   );
 
+  let allChapters = [];
+
   // Lấy chapters cho mỗi volume
   for (let vol of volumes) {
     const [chapters] = await pool.query(
@@ -336,6 +339,8 @@ async function detail(id) {
       [id, vol.volume_id]
     );
     vol.chapters = chapters;
+    // Collect tất cả chapters vào một mảng
+    allChapters = allChapters.concat(chapters);
   }
 
   // Tính tổng word_count từ tất cả chapters
@@ -345,7 +350,18 @@ async function detail(id) {
   );
   
   novel.total_words = totalWordsResult[0]?.total_words || 0;
+  
+  // Tính rating từ ratings table
+  const [ratingResult] = await pool.query(
+    "SELECT ROUND(AVG(rating), 1) as avg_rating, COUNT(*) as total_ratings FROM ratings WHERE idln = ?",
+    [id]
+  );
+  
+  novel.rating = ratingResult[0]?.avg_rating || 0;
+  novel.rating_count = ratingResult[0]?.total_ratings || 0;
+  
   novel.volumes = volumes;
+  novel.chapters = allChapters; // Thêm danh sách tất cả chapters ở top level
   return novel;
 }
 
@@ -426,6 +442,58 @@ async function deleteChapter(chapterId) {
   return result.affectedRows > 0;
 }
 
+/* =======================
+   INCREMENT VIEW
+======================= */
+async function incrementView(novelId, userId) {
+  // Kiểm tra novel tồn tại
+  const [novel] = await pool.query("SELECT created_by FROM QLTT WHERE idln = ?", [novelId]);
+  if (!novel || novel.length === 0) return false;
+
+  // Nếu tác giả xem chính mình thì không tính
+  if (userId && Number(novel[0].created_by) === Number(userId)) {
+    return true; // Trả về true nhưng không increment
+  }
+
+  // Lấy hôm nay
+  const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+
+  // Kiểm tra xem hôm nay đã có record chưa
+  const [existingView] = await pool.query(
+    "SELECT view_id FROM novel_views WHERE idln = ? AND view_date = ?",
+    [novelId, today]
+  );
+
+  if (existingView && existingView.length > 0) {
+    // Cập nhật view_count
+    await pool.query(
+      "UPDATE novel_views SET view_count = view_count + 1 WHERE idln = ? AND view_date = ?",
+      [novelId, today]
+    );
+  } else {
+    // Tạo mới record
+    await pool.query(
+      "INSERT INTO novel_views (idln, view_date, view_count) VALUES (?, ?, 1)",
+      [novelId, today]
+    );
+  }
+
+  // Cập nhật tổng view_count trong QLTT
+  const [totalViews] = await pool.query(
+    "SELECT COALESCE(SUM(view_count), 0) as total_views FROM novel_views WHERE idln = ?",
+    [novelId]
+  );
+
+  if (totalViews && totalViews.length > 0) {
+    await pool.query(
+      "UPDATE QLTT SET view_count = ? WHERE idln = ?",
+      [totalViews[0].total_views, novelId]
+    );
+  }
+
+  return true;
+}
+
 module.exports = {
   list,
   searchByTitle,
@@ -438,5 +506,6 @@ module.exports = {
   createVolume,
   createChapter,
   deleteVolume,
-  deleteChapter
+  deleteChapter,
+  incrementView
 };

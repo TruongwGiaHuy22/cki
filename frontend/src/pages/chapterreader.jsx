@@ -36,6 +36,9 @@ export default function ChapterReader() {
         // Tính toán prev và next chapter
         calculateNavigation(chapterData, novelData);
 
+        // Increment view
+        incrementNovelView(chapterData.idln);
+
         // Lưu lịch sử đọc
         saveReadingHistory(chapterData.idln, chapterData.chapter_id);
       } catch (err) {
@@ -66,6 +69,25 @@ export default function ChapterReader() {
       });
     } catch (err) {
       console.error("Lỗi lưu lịch sử:", err);
+      // Không hiển thị lỗi cho user, chỉ log
+    }
+  };
+
+  const incrementNovelView = async (idln) => {
+    try {
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+      const headers = { 'Content-Type': 'application/json' };
+      
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      await fetch(`${API_BASE}/api/novels/${idln}/view`, {
+        method: 'POST',
+        headers
+      });
+    } catch (err) {
+      console.error("Lỗi increment view:", err);
       // Không hiển thị lỗi cho user, chỉ log
     }
   };

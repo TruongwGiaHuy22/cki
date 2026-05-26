@@ -168,4 +168,21 @@ async function search(req, res, next) {
   }
 }
 
-module.exports = { list, listByUser, getById, create, update, remove, detail, chapters, createVolume, createChapter, deleteVolume, deleteChapter, search };
+async function incrementView(req, res, next) {
+  try {
+    const id = Number(req.params.id);
+    const userId = req.user?.sub || null;
+    
+    if (isNaN(id) || id <= 0) {
+      return res.status(400).json({ success: false, message: "Invalid novel ID" });
+    }
+    
+    const ok = await service.incrementView(id, userId);
+    if (!ok) return res.status(404).json({ success: false, message: "Novel not found" });
+    res.json({ success: true, message: "View incremented" });
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { list, listByUser, getById, create, update, remove, detail, chapters, createVolume, createChapter, deleteVolume, deleteChapter, search, incrementView };
