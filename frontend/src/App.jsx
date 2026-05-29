@@ -20,10 +20,27 @@ import TermsOfService from "./compoment/TermsOfService.jsx";
 import PrivacyPolicy from "./compoment/PrivacyPolicy.jsx";
 import ForumCreate from "./pages/ForumCreate.jsx";
 import ReadingHistory from "./pages/ReadingHistory.jsx";
+import AdminDashboard from "./pages/AdminDashboard.jsx";
+import AdminLogin from "./pages/AdminLogin.jsx";
 function AppLayout() {
   const location = useLocation();
   const isLoginPage = location.pathname === "/login";
   const isRegisterPage = location.pathname === "/register";
+  const isAdminLoginPage = location.pathname === "/maychu/admin";
+  const isAdminPage = location.pathname === "/maychu/admin/dashboard";
+  
+  // Admin pages có layout riêng, không cần header/footer
+  if (isAdminLoginPage || isAdminPage) {
+    return (
+      <div className="min-h-screen bg-gray-900">
+        <Routes>
+          <Route path="/maychu/admin" element={<AdminLogin />} />
+          <Route path="/maychu/admin/dashboard" element={<AdminDashboard />} />
+        </Routes>
+      </div>
+    );
+  }
+  
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
       {!isLoginPage && !isRegisterPage && <Header />}

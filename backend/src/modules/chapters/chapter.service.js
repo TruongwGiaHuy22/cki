@@ -1,5 +1,26 @@
 const pool = require("../../config/db");
 
+// Lấy tất cả chapters của một truyện
+exports.listByNovel = async (novelId) => {
+  const [chapters] = await pool.query(
+    `SELECT 
+      chapter_id, 
+      idln, 
+      volume_id, 
+      chapter_number, 
+      title, 
+      content,
+      word_count,
+      created_at,
+      updated_at
+    FROM chapters 
+    WHERE idln = ? 
+    ORDER BY volume_id ASC, chapter_number ASC`,
+    [novelId]
+  );
+  return chapters || [];
+};
+
 exports.detail = async (id) => {
   const [[chapter]] = await pool.query(
     "SELECT chapter_id, idln, volume_id, chapter_number, title, content, created_at FROM chapters WHERE chapter_id = ?",

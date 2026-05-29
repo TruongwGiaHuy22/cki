@@ -1,4 +1,5 @@
 const pool = require("../../config/db");
+const { containsBannedWords } = require("../../config/bannedWords");
 
 async function getCommentsByNovel(idln, limit = 20, offset = 0, userId = null) {
   try {
@@ -75,10 +76,14 @@ async function createComment(payload, userId) {
   try {
     const { content, idln, chapter_id, parent_id } = payload;
     
+    // Kiểm tra nếu comment chứa từ cấm
+    const isToxic = containsBannedWords(content);
+    const status = isToxic ? 'Spam' : 'Hiện';
+    
     const [result] = await pool.query(
       `INSERT INTO comments (user_id, idln, chapter_id, parent_id, content, status)
-       VALUES (?, ?, ?, ?, ?, 'Hiện')`,
-      [userId, idln, chapter_id || null, parent_id || null, content]
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [userId, idln, chapter_id || null, parent_id || null, content, status]
     );
 
     // Lấy lại dữ liệu comment vừa tạo để trả về ngay lập tức cho giao diện hiển thị
@@ -105,7 +110,8 @@ async function createComment(payload, userId) {
       user_name: created.username,
       user_email: created.email,
       is_author: !!created.is_author,
-      replies: []
+      replies: [],
+      flagged: isToxic // Thêm flag để frontend biết comment bị flag
     };
   } catch (err) {
     console.error("❌ Lỗi tại createComment:", err.message);

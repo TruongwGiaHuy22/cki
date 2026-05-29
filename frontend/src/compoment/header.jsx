@@ -33,7 +33,7 @@ export default function Header() {
     localStorage.removeItem("user");
     sessionStorage.removeItem("user");
     setUser(null);
-    navigate("/login");
+    navigate("/");
   };
 
   // Tìm kiếm truyện

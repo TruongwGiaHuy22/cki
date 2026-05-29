@@ -46,6 +46,7 @@ async function list() {
     FROM QLTT q
     LEFT JOIN truyen_theloai tt ON tt.idln = q.idln
     LEFT JOIN theloai t ON t.id_tl = tt.id_tl
+    WHERE q.active = 1
     GROUP BY q.idln
     ORDER BY q.idln DESC
   `);
@@ -234,11 +235,37 @@ async function create(data, userId) {
 
   const age_limit = safeNum(data.age_limit, 0);
 
-  /* INSERT (banner removed) */
+  /* AUTO-PROMOTE USER TO AUTHOR ROLE */
+  if (userId) {
+    try {
+      // Check current user role
+      const [userRows] = await pool.query(
+        "SELECT role FROM users WHERE user_id = ?",
+        [userId]
+      );
+      
+      // If user exists and is not already an author/admin, promote to author
+      if (userRows.length > 0) {
+        const userRole = userRows[0].role;
+        if (userRole !== 'tacgia' && userRole !== 'admin' && userRole !== 'nhanvien') {
+          await pool.query(
+            "UPDATE users SET role = 'tacgia' WHERE user_id = ?",
+            [userId]
+          );
+          console.log(`✅ User ${userId} promoted to author (tacgia)`);
+        }
+      }
+    } catch (err) {
+      console.error("⚠️ Error promoting user to author:", err.message);
+      // Don't fail the novel creation if role update fails
+    }
+  }
+
+  /* INSERT - Truyện mới sẽ chưa active (pending admin approval) */
   const [result] = await pool.query(
     `INSERT INTO QLTT
-    (title, slug, cover, author, authordraw, description, type, statuss, age_limit, created_by, updated_by)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    (title, slug, cover, author, authordraw, description, type, statuss, age_limit, active, created_by, updated_by)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)`,
     [
       title,
       slug,

@@ -1,5 +1,17 @@
 const service = require("./chapter.service");
 
+// Lấy tất cả chapters của một truyện
+exports.listByNovel = async (req, res, next) => {
+  try {
+    const novelId = Number(req.params.novelId);
+    if (isNaN(novelId) || novelId <= 0) {
+      return res.status(400).json({ success: false, message: "Invalid novel ID" });
+    }
+    const chapters = await service.listByNovel(novelId);
+    res.json({ success: true, data: chapters });
+  } catch (e) { next(e); }
+};
+
 exports.detail = async (req, res, next) => {
   try {
     const id = Number(req.params.id);

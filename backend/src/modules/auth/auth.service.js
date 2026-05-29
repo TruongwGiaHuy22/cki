@@ -31,9 +31,9 @@ async function register(data) {
 async function login(data) {
   const { identifier, password } = data;
   
-  // 3. Đổi 'id' thành 'user_id' và 'userpass' thành 'userpassword'
+  // 3. Đổi 'id' thành 'user_id' và 'userpass' thành 'userpassword', thêm role
   const [rows] = await pool.query(
-    "SELECT user_id, username, email, userpassword FROM users WHERE email = ? OR username = ? LIMIT 1",
+    "SELECT user_id, username, email, userpassword, role, active FROM users WHERE email = ? OR username = ? LIMIT 1",
     [identifier, identifier]
   );
 
@@ -44,6 +44,14 @@ async function login(data) {
   }
 
   const user = rows[0];
+
+  // Check if account is locked
+  if (!user.active) {
+    const err = new Error("Tài khoản của bạn đã bị khóa");
+    err.status = 403;
+    throw err;
+  }
+  
   let ok = false;
   
   // 4. Kiểm tra mật khẩu bằng 'user.userpassword' thay vì 'user.userpass'
@@ -64,10 +72,10 @@ async function login(data) {
     expiresIn: jwtConfig.expiresIn,
   });
 
-  // 6. Trả về đúng thông tin user_id
+  // 6. Trả về đúng thông tin user_id kèm role
   return {
     token,
-    user: { id: user.user_id, username: user.username, email: user.email },
+    user: { id: user.user_id, username: user.username, email: user.email, role: user.role },
   };
 }
 

@@ -7,6 +7,9 @@ const forumRoutes = require("../modules/forum/forum.route");
 const historyRoutes = require("../modules/history/history.route");
 const ratingRoutes = require("../modules/ratings/rating.route");
 const pool = require("../config/db");
+const adminRoutes = require('../modules/admin/adminRoutes');
+const authRequired = require('../middlewares/authRequired');
+const adminRequired = require('../middlewares/adminRequired');
 
 const router = express.Router();
 
@@ -17,6 +20,21 @@ router.use("/comments", commentRoutes);
 router.use("/forum", forumRoutes); 
 router.use("/history", historyRoutes);
 router.use("/ratings", ratingRoutes);
+router.use('/admin', authRequired, adminRequired, adminRoutes);
+
+// API theloai
+router.get("/theloai", async (req, res) => {
+  try {
+    const [rows] = await pool.query(
+      "SELECT id_tl, ten_tl, slug FROM theloai ORDER BY id_tl"
+    );
+    res.json({ success: true, data: rows });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+module.exports = router;
 
 // API theloai
 router.get("/theloai", async (req, res) => {
