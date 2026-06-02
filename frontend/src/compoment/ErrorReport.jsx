@@ -1,5 +1,6 @@
 import React from "react";
-import { useNavigate } from "react-router-dom"; 
+import { useNavigate } from "react-router-dom";
+import ReportForm from "./ReportForm"; 
 
 export default function ErrorReport() {
   const navigate = useNavigate(); 
@@ -102,6 +103,9 @@ export default function ErrorReport() {
           </div>
         </div>
       </div>
+
+      {/* FORM BÁO LỖI */}
+      <ReportForm />
     </div>
   );
 }

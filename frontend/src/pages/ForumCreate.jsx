@@ -270,8 +270,6 @@ export default function ForumCreate() {
   };
 
   const viewPostDetail = async (post) => {
-    setViewingPost(post);
-    setComments([]);
     setCommentContent("");
     setExpandedReplies(new Set());
     setReplyingTo(null);
@@ -279,20 +277,56 @@ export default function ForumCreate() {
     
     try {
       const token = getToken();
-      const response = await fetch(`http://localhost:4000/api/forum/posts/${post.post_id}/comments`, {
+      
+      // Gọi endpoint để lấy chi tiết bài viết (và tăng view_count)
+      const postResponse = await fetch(`http://localhost:4000/api/forum/posts/${post.post_id}`);
+      let updatedPost = post;
+      
+      if (postResponse.ok) {
+        const postResult = await postResponse.json();
+        if (postResult.success) {
+          updatedPost = postResult.data;
+        }
+      }
+      
+      setViewingPost(updatedPost);
+      setComments([]);
+      
+      // Gọi endpoint để lấy bình luận
+      const commentsResponse = await fetch(`http://localhost:4000/api/forum/posts/${post.post_id}/comments`, {
         headers: token ? { "Authorization": `Bearer ${token}` } : {}
       });
-      if (response.ok) {
-        const result = await response.json();
+      
+      if (commentsResponse.ok) {
+        const result = await commentsResponse.json();
         setComments(result.data || []);
       } else {
         setComments([]);
       }
     } catch (error) {
-      console.error("Lỗi tải bình luận:", error);
+      console.error("Lỗi tải chi tiết bài viết:", error);
+      setViewingPost(post);
       setComments([]);
     } finally {
       setCommentsLoading(false);
+    }
+  };
+
+  // Hàm refresh comments mà không reset UI state (dùng cho like, delete)
+  const refreshComments = async () => {
+    if (!viewingPost) return;
+    
+    try {
+      const token = getToken();
+      const response = await fetch(`http://localhost:4000/api/forum/posts/${viewingPost.post_id}/comments`, {
+        headers: token ? { "Authorization": `Bearer ${token}` } : {}
+      });
+      if (response.ok) {
+        const result = await response.json();
+        setComments(result.data || []);
+      }
+    } catch (error) {
+      console.error("Lỗi refresh bình luận:", error);
     }
   };
 
@@ -414,8 +448,8 @@ export default function ForumCreate() {
       const result = await response.json();
       
       if (response.ok && result.success) {
-        // Refresh comments để update like_count
-        await viewPostDetail(viewingPost);
+        // Refresh comments để update like_count (không reset UI state)
+        await refreshComments();
       } else {
         console.error("Like error:", result.message);
         alert("❌ Không thể thích bình luận: " + (result.message || "Lỗi không xác định"));
@@ -447,7 +481,7 @@ export default function ForumCreate() {
 
       if (response.ok || result.success) {
         alert("✅ Bình luận đã được xóa!");
-        await viewPostDetail(viewingPost);
+        await refreshComments();
       } else {
         alert("❌ Lỗi: " + (result.message || "Không thể xóa bình luận"));
       }

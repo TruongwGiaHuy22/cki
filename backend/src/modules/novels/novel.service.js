@@ -14,6 +14,7 @@ function toSlug(input) {
 
 const safeStr = (v) => (typeof v === "string" ? v.trim() : "");
 const safeNum = (v, def = 0) => (isNaN(Number(v)) ? def : Number(v));
+const publishService = require("../novel-publish/novel-publish.service");
 
 /* =======================
    LIST
@@ -160,6 +161,7 @@ async function getById(id) {
       q.author,
       q.authordraw,
       q.description,
+      q.statuss AS statuss,
       q.statuss AS status,
       q.age_limit,
       /* 💡 BỔ SUNG THÊM CÁC TRƯỜNG NÀY ĐỂ FRONTEND HIỂN THỊ */
@@ -181,12 +183,13 @@ async function getById(id) {
   const novel = rows[0];
 
   const [genres] = await pool.query(`
-    SELECT t.ten_tl
+    SELECT t.id_tl, t.ten_tl
     FROM truyen_theloai tt
     JOIN theloai t ON t.id_tl = tt.id_tl
     WHERE tt.idln = ?
   `, [id]);
 
+  novel.novel_genres = genres;
   novel.genres = genres.map(g => g.ten_tl);
 
   // Tính tổng word_count từ tất cả chapters
@@ -303,14 +306,26 @@ async function create(data, userId) {
    UPDATE
 ======================= */
 async function update(id, data) {
+  console.log("🔍 SERVICE UPDATE - Input data:", JSON.stringify(data, null, 2));
+
+  // Load existing novel to detect status/type changes
+  let existingNovel = null;
+  try {
+    existingNovel = await getById(id);
+  } catch (e) {
+    console.error('Could not load existing novel before update', e.message);
+  }
+  
   const map = {
     title: "title",
     author: "author",
     description: "description",
-    status: "statuss",
+    statuss: "statuss",
+    type: "type",
     cover: "cover",
     authordraw: "authordraw",
-    slug: "slug"
+    slug: "slug",
+    age_limit: "age_limit"
   };
 
   const fields = [];
@@ -318,22 +333,109 @@ async function update(id, data) {
 
   for (const key in map) {
     if (data[key] !== undefined) {
+      console.log(`  ✅ Found ${key}: ${data[key]}`);
       fields.push(`${map[key]} = ?`);
 
       values.push(
         key === "slug" ? toSlug(data[key]) : data[key]
       );
+    } else {
+      console.log(`  ❌ Missing ${key}`);
     }
   }
 
-  if (!fields.length) return getById(id);
+  console.log("🔨 SQL Fields:", fields);
+  console.log("📊 SQL Values:", values);
 
-  await pool.query(
-    `UPDATE QLTT SET ${fields.join(", ")} WHERE idln = ?`,
-    [...values, id]
-  );
+  if (fields.length > 0) {
+    const query = `UPDATE QLTT SET ${fields.join(", ")} WHERE idln = ?`;
+    console.log("📝 SQL Query:", query);
+    console.log("📝 Query Params:", [...values, id]);
+    
+    await pool.query(query, [...values, id]);
+    console.log("✅ Update query executed");
+  }
 
-  return getById(id);
+  // Handle genres separately since it's a junction table
+  if (Array.isArray(data.genres)) {
+    console.log("🏷️ Updating genres:", data.genres);
+    // Delete existing genres
+    await pool.query("DELETE FROM truyen_theloai WHERE idln = ?", [id]);
+    
+    // Insert new genres
+    for (const g of data.genres) {
+      const id_tl = Number(g);
+      if (!isNaN(id_tl)) {
+        await pool.query(
+          "INSERT INTO truyen_theloai (idln, id_tl) VALUES (?, ?)",
+          [id, id_tl]
+        );
+      }
+    }
+    console.log("✅ Genres updated");
+  }
+
+  const updated = await getById(id);
+
+  // Nếu cover được cập nhật, đồng bộ sang tất cả bản publish hiện hành của truyện.
+  // Title của truyện sẽ luôn đồng bộ sang các bản xuất bản hiện hành.
+  try {
+    if (data.cover !== undefined) {
+      const coverToSync = safeStr(data.cover);
+      await pool.query(
+        "UPDATE novel_publish SET cover = ? WHERE idln = ? AND active = 1",
+        [coverToSync, id]
+      );
+      console.log(`🔁 Synced cover to novel_publish for idln=${id}`);
+    }
+  } catch (e) {
+    console.error('Error while syncing cover to novel_publish:', e.message);
+  }
+
+  try {
+    if (data.title !== undefined) {
+      const titleToSync = safeStr(data.title);
+      await pool.query(
+        "UPDATE novel_publish SET title = ? WHERE idln = ? AND active = 1",
+        [titleToSync, id]
+      );
+      console.log(`🔁 Synced title to novel_publish for idln=${id}`);
+    }
+  } catch (e) {
+    console.error('Error while syncing title to novel_publish:', e.message);
+  }
+
+  // If novel just became 'Hoàn thành' and is AI dịch / Truyện dịch, ensure a publish record exists
+  try {
+    const becameCompleted = (existingNovel && existingNovel.statuss !== 'Hoàn thành') && (updated.statuss === 'Hoàn thành');
+    const allowedType = updated && (updated.type === 'AI dịch' || updated.type === 'Truyện dịch');
+    if (becameCompleted && allowedType) {
+      const existingPublishes = await publishService.getByNovelId(id);
+      if (!existingPublishes || existingPublishes.length === 0) {
+        console.log(`🔔 Auto-creating novel_publish for idln=${id}`);
+        await publishService.create({
+          idln: id,
+          volume_number: 1,
+          title: updated.title || '',
+          cover: updated.cover || '',
+          publisher_name: '',
+          author_name: updated.author || '',
+          illustrator_name: updated.authordraw || '',
+          translator_name: '',
+          total_pages: null,
+          release_date: null,
+          price: null,
+          short_description: (updated.description || '').slice(0, 1000),
+          buy_link: '',
+          store_name: ''
+        });
+      }
+    }
+  } catch (e) {
+    console.error('Error while auto-creating publish record:', e.message);
+  }
+
+  return updated;
 }
 
 /* =======================

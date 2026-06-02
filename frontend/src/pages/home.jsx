@@ -13,13 +13,32 @@ export default function Home() {
   useEffect(() => {
     const fetchReadingHistory = async () => {
       try {
+        // Get user token (not admin token)
         const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+        const userStr = localStorage.getItem('user') || sessionStorage.getItem('user');
+        
         console.log('Token:', token ? 'exists' : 'missing');
+        
         if (!token) {
           console.log('No token, skipping history fetch');
           setRecentReads([]);
           return;
         }
+        
+        // Validate that this is NOT an admin token
+        if (userStr) {
+          try {
+            const user = JSON.parse(userStr);
+            if (user.role === 'admin') {
+              console.log('Admin token detected on user site, ignoring');
+              setRecentReads([]);
+              return;
+            }
+          } catch (e) {
+            console.error('Error parsing user data:', e);
+          }
+        }
+        
         console.log('Fetching reading history...');
         const res = await fetch('http://localhost:4000/api/history', {
           headers: { 'Authorization': `Bearer ${token}` },

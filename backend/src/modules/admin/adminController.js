@@ -21,6 +21,17 @@ async function getPendingNovels(req, res, next) {
   }
 }
 
+async function getAllNovels(req, res, next) {
+  try {
+    const limit = Number(req.query.limit) || 50;
+    const offset = Number(req.query.offset) || 0;
+    const result = await service.getAllNovels(limit, offset);
+    res.json({ success: true, data: result.novels, total: result.total });
+  } catch (err) {
+    next(err);
+  }
+}
+
 async function approveNovel(req, res, next) {
   try {
     const id = Number(req.params.id);
@@ -108,21 +119,29 @@ async function changeUserRole(req, res, next) {
     const id = Number(req.params.id);
     const { role } = req.body;
     
+    console.log(`🔄 Change role request - User ID: ${id}, Role received: "${role}"`);
+    
     // Map English role names to Vietnamese database role names
     const roleMapping = {
       'user': 'docgia',
+      'author': 'tacgia',
       'moderator': 'nhanvien',
       'admin': 'admin'
     };
     
     if (!Object.keys(roleMapping).includes(role)) {
-      return res.status(400).json({ success: false, message: "Invalid role" });
+      console.log(`❌ Invalid role: "${role}". Allowed roles: ${Object.keys(roleMapping).join(', ')}`);
+      return res.status(400).json({ success: false, message: "Invalid role: " + role });
     }
     
     const dbRole = roleMapping[role];
+    console.log(`✅ Converting "${role}" to database role "${dbRole}"`);
+    
     const result = await service.changeUserRole(id, dbRole);
+    console.log(`✅ Role changed successfully`);
     res.json({ success: true, data: result });
   } catch (err) {
+    console.error(`❌ Error changing role:`, err.message);
     next(err);
   }
 }
@@ -162,8 +181,10 @@ async function rejectComment(req, res, next) {
 // 🏷️ GENRE MANAGEMENT
 async function getAllGenres(req, res, next) {
   try {
-    const genres = await service.getAllGenres();
-    res.json({ success: true, data: genres });
+    const limit = Number(req.query.limit) || 10;
+    const offset = Number(req.query.offset) || 0;
+    const result = await service.getAllGenres(limit, offset);
+    res.json({ success: true, data: result.genres, total: result.total });
   } catch (err) {
     next(err);
   }
@@ -225,6 +246,21 @@ async function resolveReport(req, res, next) {
   }
 }
 
+async function getReportDetail(req, res, next) {
+  try {
+    const reportId = Number(req.params.id);
+    const result = await service.getReportDetail(reportId);
+    
+    if (!result) {
+      return res.status(404).json({ success: false, message: "Báo cáo không tìm thấy" });
+    }
+    
+    res.json({ success: true, data: result });
+  } catch (err) {
+    next(err);
+  }
+}
+
 // 📢 ANNOUNCEMENTS
 async function getAnnouncements(req, res, next) {
   try {
@@ -270,6 +306,7 @@ async function getBannedWords(req, res, next) {
 module.exports = {
   getDashboardStats,
   getPendingNovels,
+  getAllNovels,
   approveNovel,
   rejectNovel,
   deleteNovelAsAdmin,
@@ -288,6 +325,7 @@ module.exports = {
   deleteGenre,
   getReports,
   resolveReport,
+  getReportDetail,
   getAnnouncements,
   createAnnouncement,
   deleteAnnouncement,

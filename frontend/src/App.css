@@ -1718,7 +1718,9 @@ header,
   padding-top: 1rem;
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
   border-top: 1px solid #2a303b;
+  align-items: start;
 }
 
 .stat-item {
@@ -1730,6 +1732,13 @@ header,
   justify-content: center;
   gap: 0.5rem;
 }
+
+.stat-item:nth-child(5) {
+  grid-column: 4;
+  grid-row: 2;
+  border-right: none;
+}
+
 .stat-item:last-child { border-right: none; }
 .stat-number {
   font-size: 1.6rem;
@@ -1827,30 +1836,71 @@ header,
 }
 
 .dangtruyen-form {
-  padding: 0 1rem 1rem;
-  display: grid;
-  grid-template-columns: 150px 1fr;
-  align-items: center;
-  gap: 0.7rem 0.8rem;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.dangtruyen-form > div {
+  margin-top: 0.5rem;
 }
 
 .dangtruyen-form label {
-  text-align: right;
-  font-size: 1rem;
+  text-align: left;
+  font-size: 0.95rem;
+  display: block;
+  margin-bottom: 0.5rem;
+  color: #333;
+  font-weight: 600;
+  margin-top: 1.2rem;
 }
 
 .dangtruyen-form label span {
   color: #d72222;
+  margin-left: 3px;
 }
 
 .dangtruyen-form input[type="text"],
 .dangtruyen-form select,
-.dangtruyen-form textarea {
+.dangtruyen-form textarea,
+.dangtruyen-form input[type="file"] {
   width: 100%;
-  border: 1px solid #c7c7c7;
+  border: 1px solid #e0e0e0;
   background: #fff;
-  padding: 0.6rem 0.65rem;
-  border-radius: 0.2rem;
+  padding: 0.7rem;
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 0.95rem;
+  color: #333;
+  box-sizing: border-box;
+  transition: all 0.2s ease;
+}
+
+.dangtruyen-form input[type="text"]:hover,
+.dangtruyen-form select:hover,
+.dangtruyen-form textarea:hover,
+.dangtruyen-form input[type="file"]:hover {
+  border-color: #d72222;
+}
+
+.dangtruyen-form input[type="text"]:focus,
+.dangtruyen-form select:focus,
+.dangtruyen-form textarea:focus,
+.dangtruyen-form input[type="file"]:focus {
+  outline: none;
+  border-color: #d72222;
+  box-shadow: 0 0 0 3px rgba(215, 34, 34, 0.08);
+}
+
+.dangtruyen-form input[type="file"] {
+  padding: 0.7rem;
+}
+
+.dangtruyen-form textarea {
+  resize: vertical;
+  min-height: 120px;
+  line-height: 1.5;
 }
 
 .dangtruyen-checkbox {
@@ -1859,28 +1909,88 @@ header,
 
 .dangtruyen-genres {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0.45rem 0.75rem;
-  max-height: 260px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0;
+  max-height: 500px;
   overflow-y: auto;
-  border: 1px solid #c7c7c7;
+  border: 1px solid #e0e0e0;
   background: #fff;
-  padding: 0.7rem;
-  border-radius: 0.2rem;
+  padding: 0;
+  border-radius: 4px;
+  margin-top: 0.5rem;
+  margin-bottom: 0;
 }
 
 .dangtruyen-genre-item {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
-  font-size: 0.9rem;
-  text-align: left;
+  gap: 0.8rem;
+  font-size: 0.95rem;
+  color: #d72222;
+  cursor: pointer;
+  user-select: none;
+  padding: 1rem;
+  background: #fff;
+  border: none;
+  border-right: 1px solid #e0e0e0;
+  border-bottom: 1px solid #e0e0e0;
+  transition: all 0.2s ease;
+  font-weight: 500;
+  margin: 0;
+}
+
+.dangtruyen-genre-item:nth-child(4n+1) {
+  border-left: 1px solid #e0e0e0;
+}
+
+.dangtruyen-genre-item:nth-child(-n+4) {
+  border-top: 1px solid #e0e0e0;
+}
+
+.dangtruyen-genre-item:hover {
+  border-right-color: #d72222;
+  border-bottom-color: #d72222;
+}
+
+.dangtruyen-genre-item:nth-child(4n+1):hover {
+  border-left-color: #d72222;
+}
+
+.dangtruyen-genre-item:nth-child(-n+4):hover {
+  border-top-color: #d72222;
+}
+
+.dangtruyen-genre-item:hover span {
+  color: #d72222;
+}
+
+.dangtruyen-genre-item input[type="checkbox"] {
+  cursor: pointer;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: #d72222;
+  flex-shrink: 0;
+}
+
+.dangtruyen-genre-item input[type="checkbox"]:checked + span {
+  color: #d72222;
+  font-weight: 600;
+}
+
+.dangtruyen-genre-item span {
+  color: #333;
+  font-weight: 400;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .dangtruyen-actions {
   display: flex;
   align-items: center;
   gap: 1rem;
+  margin-top: 1.2rem;
 }
 
 .dangtruyen-submit {

@@ -33,6 +33,10 @@ export default function QuanLyTruyen() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [showVolumeMenu, setShowVolumeMenu] = useState(false);
   const [selectedVolumeForDelete, setSelectedVolumeForDelete] = useState(null);
+  const [isEditNovelModalOpen, setIsEditNovelModalOpen] = useState(false);
+  const [editingNovel, setEditingNovel] = useState(null);
+  const [genres, setGenres] = useState([]);
+  const [uploadLoading, setUploadLoading] = useState(false);
 
   // 1. Kiểm tra quyền đăng nhập ngay khi vào trang
   useEffect(() => {
@@ -40,6 +44,20 @@ export default function QuanLyTruyen() {
     if (!token) {
       window.location.href = "/login";
     }
+  }, []);
+
+  // Fetch genres khi component mount
+  useEffect(() => {
+    async function fetchGenres() {
+      try {
+        const res = await fetch(`${API_BASE}/api/theloai`);
+        const json = await res.json();
+        setGenres(json.data || json);
+      } catch (err) {
+        console.error("Load genres error:", err);
+      }
+    }
+    fetchGenres();
   }, []);
 
   // 2. Tải danh sách truyện - Chỉ những truyện do tài khoản này tạo (created_by)
@@ -298,6 +316,121 @@ export default function QuanLyTruyen() {
     setIsEditModalOpen(true);
   }
 
+  // Mở modal chỉnh sửa thông tin truyện
+  function openEditNovel() {
+    if (!detail) return;
+    console.log("📖 Detail data:", detail);
+    console.log("  - type:", detail.type);
+    console.log("  - statuss:", detail.statuss);
+    console.log("  - novel_genres:", detail.novel_genres);
+    
+    setEditingNovel({
+      idln: detail.idln,
+      title: detail.title || "",
+      author: detail.author || "",
+      authordraw: detail.authordraw || "",
+      cover: detail.cover || "",
+      description: detail.description || "",
+      type: detail.type || "AI dịch",
+      statuss: detail.statuss || "Đang tiến hành",
+      age_limit: detail.age_limit || 0,
+      genres: (detail.novel_genres || []).map(g => g.id_tl),
+    });
+    setIsEditNovelModalOpen(true);
+  }
+
+  // Upload ảnh bìa
+  async function handleUploadNovelCover(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setUploadLoading(true);
+    const formData = new FormData();
+    formData.append("cover", file);
+
+    try {
+      const token = localStorage.getItem("token") || sessionStorage.getItem("token");
+      const res = await fetch(`${API_BASE}/api/upload-cover`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      const json = await res.json();
+      if (json.success) {
+        setEditingNovel({ ...editingNovel, cover: json.filename });
+        alert("✅ Upload ảnh thành công!");
+      } else {
+        alert(`❌ Lỗi upload: ${json.message}`);
+      }
+    } catch (err) {
+      alert("❌ Lỗi kết nối khi upload ảnh");
+      console.error(err);
+    } finally {
+      setUploadLoading(false);
+    }
+  }
+
+  // Toggle chọn genre
+  function toggleEditingGenre(id) {
+    setEditingNovel(prev => ({
+      ...prev,
+      genres: prev.genres.includes(id)
+        ? prev.genres.filter(g => g !== id)
+        : [...prev.genres, id],
+    }));
+  }
+
+  // Cập nhật thông tin truyện
+  async function updateNovel() {
+    const token = localStorage.getItem("token") || sessionStorage.getItem("token");
+    if (!editingNovel) return;
+
+    const body = {
+      title: editingNovel.title,
+      author: editingNovel.author,
+      authordraw: editingNovel.authordraw,
+      cover: editingNovel.cover,
+      description: editingNovel.description,
+      type: editingNovel.type,
+      statuss: editingNovel.statuss,
+      age_limit: Number(editingNovel.age_limit),
+      genres: editingNovel.genres,
+    };
+    
+    console.log("📤 SENDING UPDATE REQUEST");
+    console.log("  Body:", JSON.stringify(body, null, 2));
+
+    try {
+      const res = await fetch(`${API_BASE}/api/novels/${editingNovel.idln}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify(body)
+      });
+
+      console.log("📥 RESPONSE Status:", res.status);
+      const data = await res.json();
+      console.log("📥 RESPONSE Data:", data);
+
+      if (res.ok) {
+        setIsEditNovelModalOpen(false);
+        reloadCurrentNovel();
+        try { window.dispatchEvent(new Event('novels:refresh')); } catch (e) { console.error('Dispatch novels:refresh failed', e); }
+        alert("✅ Cập nhật truyện thành công!");
+      } else {
+        alert("❌ Lỗi cập nhật truyện!");
+      }
+    } catch (err) {
+      console.error("Lỗi cập nhật truyện:", err);
+      alert("❌ Lỗi kết nối!");
+    }
+  }
+
   // Cập nhật chapter
   async function updateChapter() {
     const token = localStorage.getItem("token") || sessionStorage.getItem("token");
@@ -335,10 +468,9 @@ export default function QuanLyTruyen() {
       <nav className="dangtruyen-topnav">
         <button className={location.pathname === "/dang-truyen" ? "active" : ""} onClick={() => navigate("/dang-truyen")}>Thêm Truyện mới</button>
         <button className={location.pathname === "/quan-ly-truyen" ? "active" : ""} onClick={() => navigate("/quan-ly-truyen")}>Q.Lý truyện</button>
-        <button>Q.Lý Convert</button>
-        <button>Q.Lý Sáng tác</button>
-        <button>Q.Lý Trang</button>
-        <button>Tiện ích</button>
+        <button className={location.pathname === "/quan-ly-xuat-ban" ? "active" : ""} onClick={() => navigate("/quan-ly-xuat-ban")}>Q.Lý Xuất bản</button>
+        <button className={location.pathname === "/quan-ly-comment" ? "active" : ""} onClick={() => navigate("/quan-ly-comment")}>Q.Lý Comment</button>
+        <button onClick={() => navigate("/error-report")}>Báo lỗi</button>
       </nav>
 
       {/* MAIN LAYOUT */}
@@ -433,7 +565,31 @@ export default function QuanLyTruyen() {
                           borderBottom: "1px solid #3a4250",
                           transition: "all 0.2s ease"
                         }}
-                        onMouseOver={(e) => e.target.style.background = "#2563eb"}
+                        onMouseOver={(e) => e.target.style.background = "#3b82f6"}
+                        onMouseOut={(e) => e.target.style.background = "transparent"}
+                        onClick={() => {
+                          openEditNovel();
+                          setShowVolumeMenu(false);
+                        }}
+                      >
+                        ✏️ Chỉnh sửa Truyện
+                      </button>
+
+                      <button 
+                        style={{
+                          display: "block",
+                          width: "100%",
+                          padding: "0.75rem 1rem",
+                          background: "transparent",
+                          border: "none",
+                          color: "#e2e8f0",
+                          textAlign: "left",
+                          cursor: "pointer",
+                          fontSize: "0.9rem",
+                          borderBottom: "1px solid #3a4250",
+                          transition: "all 0.2s ease"
+                        }}
+                        onMouseOver={(e) => e.target.style.background = "#10b981"}
                         onMouseOut={(e) => e.target.style.background = "transparent"}
                         onClick={() => createVolume(detail.idln)}
                       >
@@ -711,6 +867,164 @@ export default function QuanLyTruyen() {
               </button>
               <button style={{ padding: "0.6rem 1.5rem", background: "#2563eb", color: "#ffffff", border: "none", borderRadius: "0.5rem", cursor: "pointer", fontWeight: "500" }} onClick={updateChapter}>
                 Lưu lại
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* EDIT NOVEL MODAL */}
+      {isEditNovelModalOpen && editingNovel && (
+        <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0, 0, 0, 0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1500, padding: "1rem" }} onClick={() => setIsEditNovelModalOpen(false)}>
+          <div style={{ background: "#1a1d23", border: "1px solid #242b36", borderRadius: "1rem", maxWidth: "900px", width: "100%", maxHeight: "95vh", display: "flex", flexDirection: "column", boxShadow: "0 20px 60px rgba(0, 0, 0, 0.5)", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "1.5rem", borderBottom: "1px solid #242b36", position: "sticky", top: 0, background: "#1a1d23", zIndex: 10 }}>
+              <h2 style={{ margin: 0, fontSize: "1.5rem", color: "#e2e8f0" }}>✏️ Chỉnh sửa Thông tin Truyện</h2>
+              <button style={{ background: "none", border: "none", color: "#94a3b8", fontSize: "1.5rem", cursor: "pointer", padding: "0.25rem 0.5rem" }} onClick={() => setIsEditNovelModalOpen(false)}>✕</button>
+            </div>
+
+            <div style={{ padding: "1.5rem", flex: 1 }}>
+              {/* Tiêu đề */}
+              <div style={{ marginBottom: "1.5rem" }}>
+                <label style={{ display: "block", color: "#e2e8f0", fontWeight: "500", marginBottom: "0.5rem" }}>Tiêu đề Truyện <span style={{ color: "#ef4444" }}>*</span></label>
+                <input
+                  type="text"
+                  value={editingNovel.title || ""}
+                  onChange={(e) => setEditingNovel({...editingNovel, title: e.target.value})}
+                  style={{ width: "100%", padding: "0.75rem 1rem", background: "#242b36", border: "1px solid #3a4250", borderRadius: "0.5rem", color: "#e2e8f0", fontSize: "0.95rem", fontFamily: "inherit", boxSizing: "border-box" }}
+                  placeholder="Nhập tiêu đề truyện"
+                />
+              </div>
+
+              {/* Tác giả */}
+              <div style={{ marginBottom: "1.5rem" }}>
+                <label style={{ display: "block", color: "#e2e8f0", fontWeight: "500", marginBottom: "0.5rem" }}>Tác giả <span style={{ color: "#ef4444" }}>*</span></label>
+                <input
+                  type="text"
+                  value={editingNovel.author || ""}
+                  onChange={(e) => setEditingNovel({...editingNovel, author: e.target.value})}
+                  style={{ width: "100%", padding: "0.75rem 1rem", background: "#242b36", border: "1px solid #3a4250", borderRadius: "0.5rem", color: "#e2e8f0", fontSize: "0.95rem", fontFamily: "inherit", boxSizing: "border-box" }}
+                  placeholder="Nhập tên tác giả"
+                />
+              </div>
+
+              {/* Họa sĩ */}
+              <div style={{ marginBottom: "1.5rem" }}>
+                <label style={{ display: "block", color: "#e2e8f0", fontWeight: "500", marginBottom: "0.5rem" }}>Họa sĩ</label>
+                <input
+                  type="text"
+                  value={editingNovel.authordraw || ""}
+                  onChange={(e) => setEditingNovel({...editingNovel, authordraw: e.target.value})}
+                  style={{ width: "100%", padding: "0.75rem 1rem", background: "#242b36", border: "1px solid #3a4250", borderRadius: "0.5rem", color: "#e2e8f0", fontSize: "0.95rem", fontFamily: "inherit", boxSizing: "border-box" }}
+                  placeholder="Nhập tên họa sĩ"
+                />
+              </div>
+
+              {/* Ảnh bìa */}
+              <div style={{ marginBottom: "1.5rem" }}>
+                <label style={{ display: "block", color: "#e2e8f0", fontWeight: "500", marginBottom: "0.5rem" }}>Ảnh bìa</label>
+                <div style={{ marginBottom: "1rem", padding: "1rem", background: "#242b36", border: "1px solid #3a4250", borderRadius: "0.5rem" }}>
+                  <p style={{ margin: "0 0 0.75rem 0", fontSize: "0.9rem", color: "#94a3b8" }}>📤 Upload ảnh từ máy</p>
+                  <input 
+                    type="file" 
+                    accept="image/*" 
+                    onChange={handleUploadNovelCover}
+                    disabled={uploadLoading}
+                    style={{ width: "100%", color: "#e2e8f0" }}
+                  />
+                  {uploadLoading && <p style={{ color: "#60a5fa", margin: "0.75rem 0 0 0", fontSize: "0.85rem" }}>⏳ Đang upload...</p>}
+                </div>
+                <div style={{ marginBottom: "1rem", padding: "1rem", background: "#242b36", border: "1px solid #3a4250", borderRadius: "0.5rem" }}>
+                  <p style={{ margin: "0 0 0.75rem 0", fontSize: "0.9rem", color: "#94a3b8" }}>✏️ Hoặc gõ tên file ảnh</p>
+                  <input 
+                    type="text" 
+                    value={editingNovel.cover || ""} 
+                    onChange={(e) => setEditingNovel({...editingNovel, cover: e.target.value})}
+                    style={{ width: "100%", padding: "0.75rem 1rem", background: "#242b36", border: "1px solid #3a4250", borderRadius: "0.5rem", color: "#e2e8f0", fontSize: "0.95rem", fontFamily: "inherit", boxSizing: "border-box" }}
+                    placeholder="VD: cover.jpg"
+                  />
+                </div>
+              </div>
+
+              {/* Thể loại */}
+              <div style={{ marginBottom: "1.5rem" }}>
+                <label style={{ display: "block", color: "#e2e8f0", fontWeight: "500", marginBottom: "1rem" }}>Thể loại</label>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.75rem", padding: "1rem", background: "#242b36", border: "1px solid #3a4250", borderRadius: "0.5rem", maxHeight: "300px", overflowY: "auto" }}>
+                  {genres.map(genre => (
+                    <label key={genre.id_tl} style={{ display: "flex", alignItems: "center", gap: "0.5rem", cursor: "pointer", color: "#e2e8f0" }}>
+                      <input
+                        type="checkbox"
+                        checked={editingNovel.genres.includes(genre.id_tl)}
+                        onChange={() => toggleEditingGenre(genre.id_tl)}
+                        style={{ cursor: "pointer", accentColor: "#2563eb" }}
+                      />
+                      <span style={{ fontSize: "0.9rem" }}>{genre.ten_tl}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Loại truyện */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", marginBottom: "1.5rem" }}>
+                <div>
+                  <label style={{ display: "block", color: "#e2e8f0", fontWeight: "500", marginBottom: "0.5rem" }}>Loại truyện</label>
+                  <select
+                    value={editingNovel.type || "AI dịch"}
+                    onChange={(e) => setEditingNovel({...editingNovel, type: e.target.value})}
+                    style={{ width: "100%", padding: "0.75rem 1rem", background: "#242b36", border: "1px solid #3a4250", borderRadius: "0.5rem", color: "#e2e8f0", fontSize: "0.95rem", boxSizing: "border-box", cursor: "pointer" }}
+                  >
+                    <option>AI dịch</option>
+                    <option>Sáng tác</option>
+                    <option>Truyện dịch</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ display: "block", color: "#e2e8f0", fontWeight: "500", marginBottom: "0.5rem" }}>Tình trạng</label>
+                  <select
+                    value={editingNovel.statuss || "Đang tiến hành"}
+                    onChange={(e) => setEditingNovel({...editingNovel, statuss: e.target.value})}
+                    style={{ width: "100%", padding: "0.75rem 1rem", background: "#242b36", border: "1px solid #3a4250", borderRadius: "0.5rem", color: "#e2e8f0", fontSize: "0.95rem", boxSizing: "border-box", cursor: "pointer" }}
+                  >
+                    <option>Đang tiến hành</option>
+                    <option>Hoàn thành</option>
+                    <option>Tạm ngưng</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Tuổi */}
+              <div style={{ marginBottom: "1.5rem" }}>
+                <label style={{ display: "block", color: "#e2e8f0", fontWeight: "500", marginBottom: "0.5rem" }}>Giới hạn độ tuổi</label>
+                <select
+                  value={editingNovel.age_limit || 0}
+                  onChange={(e) => setEditingNovel({...editingNovel, age_limit: e.target.value})}
+                  style={{ width: "100%", padding: "0.75rem 1rem", background: "#242b36", border: "1px solid #3a4250", borderRadius: "0.5rem", color: "#e2e8f0", fontSize: "0.95rem", boxSizing: "border-box", cursor: "pointer" }}
+                >
+                  <option value="0">0+</option>
+                  <option value="16">16+</option>
+                  <option value="18">18+</option>
+                </select>
+              </div>
+
+              {/* Mô tả */}
+              <div style={{ marginBottom: 0 }}>
+                <label style={{ display: "block", color: "#e2e8f0", fontWeight: "500", marginBottom: "0.5rem" }}>Mô tả <span style={{ color: "#ef4444" }}>*</span></label>
+                <textarea
+                  value={editingNovel.description || ""}
+                  onChange={(e) => setEditingNovel({...editingNovel, description: e.target.value})}
+                  style={{ width: "100%", padding: "0.75rem 1rem", background: "#242b36", border: "1px solid #3a4250", borderRadius: "0.5rem", color: "#e2e8f0", fontSize: "0.95rem", fontFamily: "inherit", boxSizing: "border-box", resize: "vertical", minHeight: "150px" }}
+                  placeholder="Nhập mô tả truyện"
+                  rows="8"
+                />
+              </div>
+            </div>
+
+            <div style={{ display: "flex", gap: "1rem", padding: "1.5rem", borderTop: "1px solid #242b36", justifyContent: "flex-end", position: "sticky", bottom: 0, background: "#1a1d23", zIndex: 10 }}>
+              <button style={{ padding: "0.6rem 1rem", background: "#6b7280", color: "#ffffff", border: "none", borderRadius: "0.5rem", cursor: "pointer", fontWeight: "500" }} onClick={() => setIsEditNovelModalOpen(false)}>
+                Hủy
+              </button>
+              <button style={{ padding: "0.6rem 1.5rem", background: "#10b981", color: "#ffffff", border: "none", borderRadius: "0.5rem", cursor: "pointer", fontWeight: "500" }} onClick={updateNovel}>
+                Lưu thay đổi
               </button>
             </div>
           </div>

@@ -19,7 +19,18 @@ export default function Header() {
     let userStr = localStorage.getItem("user") || sessionStorage.getItem("user");
     if (userStr) {
       try {
-        setUser(JSON.parse(userStr));
+        const userData = JSON.parse(userStr);
+        // Validate that this is NOT an admin user
+        if (userData.role === 'admin') {
+          console.log('Admin token detected on user site, clearing');
+          localStorage.removeItem("token");
+          localStorage.removeItem("user");
+          sessionStorage.removeItem("token");
+          sessionStorage.removeItem("user");
+          setUser(null);
+          return;
+        }
+        setUser(userData);
       } catch {}
     } else {
       setUser(null);
@@ -32,6 +43,11 @@ export default function Header() {
     sessionStorage.removeItem("token");
     localStorage.removeItem("user");
     sessionStorage.removeItem("user");
+    // Also clear admin tokens if they exist
+    localStorage.removeItem("admin_token");
+    localStorage.removeItem("admin_user");
+    sessionStorage.removeItem("admin_token");
+    sessionStorage.removeItem("admin_user");
     setUser(null);
     navigate("/");
   };
@@ -236,17 +252,6 @@ export default function Header() {
                     padding: '8px 0',
                   }}
                 >
-                  {/* Nút Tài khoản */}
-                  <button 
-                    className="user-dropdown-item" 
-                    onClick={() => { setUserDropdown(false); navigate('/profile'); }}
-                    style={{display:'flex',alignItems:'center',width:'100%',background:'none',border:'none',color:'#fff',padding:'10px 20px',fontSize:'1rem',cursor:'pointer',textAlign:'left',gap:8}}
-                  >
-                    <span style={{marginRight:0}}> 
-                      <svg width="18" height="18" fill="#a78bfa" viewBox="0 0 24 24"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
-                    </span> Tài khoản
-                  </button>
-
                   {/* Nút Lịch sử */}
                   <button 
                     className="user-dropdown-item" 
@@ -257,7 +262,16 @@ export default function Header() {
                       <svg width="18" height="18" fill="#f472b6" viewBox="0 0 24 24"><path d="M12 8a4 4 0 1 1 0 8 4 4 0 0 1 0-8zm0-6C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.5-13h-1v6l5.25 3.15.77-1.28-4.52-2.67V7z"/></svg>
                     </span> Lịch sử
                   </button>
-
+                  {/* Nút Đánh dấu */}
+                  <button 
+                    className="user-dropdown-item" 
+                    onClick={() => { setUserDropdown(false); navigate('/bookmarks'); }}
+                    style={{display:'flex',alignItems:'center',width:'100%',background:'none',border:'none',color:'#fff',padding:'10px 20px',fontSize:'1rem',cursor:'pointer',textAlign:'left',gap:8}}
+                  >
+                    <span style={{marginRight:0}}>
+                      <svg width="18" height="18" fill="#fbbf24" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v16l7-3 7 3V5c0-1.1-.9-2-2-2z"/></svg>
+                    </span> Đánh dấu
+                  </button>
                   {/* Nút Đăng xuất */}
                   <button 
                     className="user-dropdown-item" 

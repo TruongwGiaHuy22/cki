@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { getImageUrl } from "../utils/imageUrl";
 
 const API_BASE = "http://localhost:4000";
@@ -22,35 +22,54 @@ export function useNovels() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  useEffect(() => {
+  const fetchNovels = useCallback(async () => {
     let alive = true;
-    (async () => {
-      try {
-        setLoading(true);
-        const res = await fetch(`${API_BASE}/api/novels`);
-        const json = await res.json();
-        if (!res.ok || !json.success) throw new Error(json.message || "Load novels failed");
-        if (alive) {
-          const mapped = (json.data || []).map((n) => ({
-            ...n,
-            id: n.idln,
-            genres: Array.isArray(n.genres) ? n.genres : [],
-            chapters: Array.isArray(n.chapters) ? n.chapters : [],
-            cover: resolveCover(n.cover, n.idln),
-            author: n.author || n.authordraw || "Ẩn danh",
-          }));
-          setNovels(mapped);
-        }
-      } catch (e) {
-        if (alive) setError(e.message || "Có lỗi tải dữ liệu");
-      } finally {
-        if (alive) setLoading(false);
+    try {
+      setLoading(true);
+      const res = await fetch(`${API_BASE}/api/novels`);
+      const json = await res.json();
+      if (!res.ok || !json.success) throw new Error(json.message || "Load novels failed");
+      if (alive) {
+        const mapped = (json.data || []).map((n) => ({
+          ...n,
+          id: n.idln,
+          genres: Array.isArray(n.genres) ? n.genres : [],
+          chapters: Array.isArray(n.chapters) ? n.chapters : [],
+          cover: resolveCover(n.cover, n.idln),
+          author: n.author || n.authordraw || "Ẩn danh",
+        }));
+        setNovels(mapped);
+        setError("");
       }
-    })();
-    return () => {
-      alive = false;
-    };
+    } catch (e) {
+      setError(e.message || "Có lỗi tải dữ liệu");
+    } finally {
+      if (alive) setLoading(false);
+    }
+    return () => { alive = false; };
   }, []);
 
-  return useMemo(() => ({ novels, loading, error }), [novels, loading, error]);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      await fetchNovels();
+      if (cancelled) return;
+    })();
+    return () => { cancelled = true; };
+  }, [fetchNovels]);
+
+  // Listen for global refresh events so different hook instances can be synced
+  useEffect(() => {
+    const handler = () => {
+      try {
+        fetchNovels();
+      } catch (e) {
+        console.error('novels refresh handler error', e);
+      }
+    };
+    window.addEventListener('novels:refresh', handler);
+    return () => window.removeEventListener('novels:refresh', handler);
+  }, [fetchNovels]);
+
+  return useMemo(() => ({ novels, loading, error, refresh: fetchNovels }), [novels, loading, error, fetchNovels]);
 }

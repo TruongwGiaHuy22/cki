@@ -43,9 +43,9 @@ const AdminLogin = () => {
         return;
       }
 
-      // Lưu token và user info
-      localStorage.setItem('token', data.data.token);
-      localStorage.setItem('user', JSON.stringify(data.data.user));
+      // Lưu token và user info (với key riêng cho admin)
+      localStorage.setItem('admin_token', data.data.token);
+      localStorage.setItem('admin_user', JSON.stringify(data.data.user));
 
       // Redirect tới AdminDashboard
       navigate('/maychu/admin/dashboard');

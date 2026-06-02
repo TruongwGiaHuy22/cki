@@ -12,6 +12,7 @@ router.get('/dashboard/stats', controller.getDashboardStats);
 
 // 📚 Novels
 router.get('/novels/pending', controller.getPendingNovels);
+router.get('/novels', controller.getAllNovels);
 router.put('/novels/:id/approve', controller.approveNovel);
 router.put('/novels/:id/reject', controller.rejectNovel);
 router.delete('/novels/:id', controller.deleteNovelAsAdmin);
@@ -37,6 +38,7 @@ router.delete('/genres/:id', controller.deleteGenre);
 
 // 📋 Reports
 router.get('/reports', controller.getReports);
+router.get('/reports/:id', controller.getReportDetail);
 router.patch('/reports/:id', controller.resolveReport);
 
 // 📢 Announcements

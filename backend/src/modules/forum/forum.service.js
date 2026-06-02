@@ -133,6 +133,22 @@ exports.updatePost = async (post_id, user_id, { title, content, category }) => {
 exports.deletePost = async (post_id, user_id) => {
   const [posts] = await db.execute(`SELECT user_id FROM forum_posts WHERE post_id = ?`, [post_id]);
   if (!posts.length || posts[0].user_id !== user_id) return null;
+  
+  // Xóa manual để tránh vượt quá giới hạn cascade delete (30 bảng)
+  // 1. Xóa tất cả likes của comments
+  await db.execute(
+    `DELETE FROM forum_comment_likes 
+     WHERE comment_id IN (SELECT comment_id FROM forum_comments WHERE post_id = ?)`,
+    [post_id]
+  );
+  
+  // 2. Xóa tất cả comments (bao gồm nested replies)
+  await db.execute(
+    `DELETE FROM forum_comments WHERE post_id = ?`,
+    [post_id]
+  );
+  
+  // 3. Xóa post
   await db.execute(`DELETE FROM forum_posts WHERE post_id = ?`, [post_id]);
   return true;
 };
@@ -152,7 +168,25 @@ exports.deleteComment = async (comment_id, user_id) => {
   // Chỉ cho phép xóa nếu là chủ bình luận hoặc admin
   if (!isOwner && !isAdmin) return null;
   
-  await db.execute(`DELETE FROM forum_comments WHERE comment_id = ?`, [comment_id]);
+  // Xóa manual để tránh vượt quá giới hạn cascade delete
+  // 1. Xóa likes của comment này và tất cả nested replies
+  await db.execute(
+    `DELETE FROM forum_comment_likes 
+     WHERE comment_id IN (
+       SELECT comment_id FROM forum_comments 
+       WHERE comment_id = ? OR parent_id = ? 
+       OR parent_id IN (SELECT comment_id FROM forum_comments WHERE parent_id = ?)
+     )`,
+    [comment_id, comment_id, comment_id]
+  );
+  
+  // 2. Xóa comment này và tất cả nested replies
+  await db.execute(
+    `DELETE FROM forum_comments 
+     WHERE comment_id = ? OR parent_id = ?`,
+    [comment_id, comment_id]
+  );
+  
   return true;
 };
 

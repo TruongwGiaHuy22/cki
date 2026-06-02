@@ -46,6 +46,8 @@ export default function NovelDetail() {
   const [error, setError] = useState("");
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
+  const [isBookmarked, setIsBookmarked] = useState(false);
+  const [bookmarkLoading, setBookmarkLoading] = useState(false);
 
   const fetchNovelDetail = async () => {
     try {
@@ -76,8 +78,76 @@ export default function NovelDetail() {
     const token = localStorage.getItem('token');
     if (token) {
       setCurrentUser(true);
+      // Kiểm tra xem truyện đã được bookmark hay chưa
+      checkBookmarkStatus(token);
     }
-  }, []);
+  }, [id]);
+
+  const checkBookmarkStatus = async (token) => {
+    try {
+      const res = await fetch(`${API_BASE}/api/bookmarks/check/${id}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      const result = await res.json();
+      if (result.success) {
+        setIsBookmarked(result.isBookmarked);
+      }
+    } catch (err) {
+      console.error("Error checking bookmark:", err);
+    }
+  };
+
+  const handleBookmarkToggle = async () => {
+    const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+    
+    if (!token) {
+      alert('Vui lòng đăng nhập để sử dụng tính năng này');
+      return;
+    }
+
+    try {
+      setBookmarkLoading(true);
+      
+      if (isBookmarked) {
+        // Xóa bookmark
+        const res = await fetch(`${API_BASE}/api/bookmarks`, {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ idln: id })
+        });
+        const result = await res.json();
+        if (result.success) {
+          setIsBookmarked(false);
+        }
+      } else {
+        // Thêm bookmark
+        const res = await fetch(`${API_BASE}/api/bookmarks`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ idln: id })
+        });
+        const result = await res.json();
+        if (result.success) {
+          setIsBookmarked(true);
+        }
+      }
+    } catch (err) {
+      console.error("Error toggling bookmark:", err);
+      alert('Có lỗi xảy ra');
+    } finally {
+      setBookmarkLoading(false);
+    }
+  };
 
   if (loading) return <div className="novelsdetail-p-4">Đang tải dữ liệu...</div>;
   if (error || listError) return <div className="novelsdetail-p-4">Lỗi: {error || listError}</div>;
@@ -122,6 +192,13 @@ export default function NovelDetail() {
               </div>
             </div>
             
+            <div className="stat-item">
+              <div className="stat-label">Số từ</div>
+              <div className="stat-number" style={{ color: "#4ECDC4" }}>
+                {formatNumber(novel.total_words || 0)}
+              </div>
+            </div>
+            
             <div className="stat-item" onClick={() => setShowRatingModal(true)} style={{ cursor: "pointer" }}>
               <div className="stat-label">Đánh giá</div>
              
@@ -132,16 +209,21 @@ export default function NovelDetail() {
             </div>
             
             <div className="stat-item">
-              <div className="stat-label">Số từ</div>
-              <div className="stat-number" style={{ color: "#4ECDC4" }}>
-                {formatNumber(novel.total_words || 0)}
-              </div>
-            </div>
-            
-            <div className="stat-item">
               <div className="stat-label">Cập nhập</div>
               <div className="stat-number" style={{ color: "#94a3b8", fontSize: "16px" }}>
                 {formatDate(novel.updated_at)}
+              </div>
+            </div>
+            
+            <div 
+              className="stat-item" 
+              onClick={handleBookmarkToggle}
+              style={{ cursor: bookmarkLoading ? "not-allowed" : "pointer", opacity: bookmarkLoading ? 0.6 : 1 }}
+              title={isBookmarked ? "Xóa đánh dấu" : "Đánh dấu truyện"}
+            >
+              <div className="stat-label">Đánh dấu</div>
+              <div className="stat-number" style={{ color: isBookmarked ? "#FF6B6B" : "#94a3b8", fontSize: "1.5rem" }}>
+                {isBookmarked ? "🔖" : "📌"}
               </div>
             </div>
           </div>

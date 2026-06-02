@@ -19,6 +19,7 @@
   height: 100vh;
   left: 0;
   top: 0;
+  z-index: 100;
 }
 
 .admin-logo {
@@ -112,9 +113,11 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  position: sticky;
+  position: fixed;
   top: 0;
-  z-index: 10;
+  left: 280px;
+  right: 0;
+  z-index: 50;
 }
 
 .admin-topbar h1 {
@@ -131,6 +134,7 @@
 .admin-content {
   padding: 2rem;
   flex: 1;
+  margin-top: 110px;
 }
 
 .admin-section {
@@ -457,6 +461,61 @@
   }
 }
 
+/* ADMIN TOTAL */
+.admin-total {
+  color: #fbbf24;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  font-size: 0.95rem;
+}
+
+/* PAGINATION */
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 2rem;
+  flex-wrap: wrap;
+}
+
+.pagination-btn {
+  background: #334155;
+  color: #cbd5e1;
+  border: 1px solid #475569;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.35rem;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  font-size: 0.9rem;
+  min-width: 40px;
+}
+
+.pagination-btn:hover:not(:disabled) {
+  background: #475569;
+  color: #fbbf24;
+  border-color: #fbbf24;
+}
+
+.pagination-btn.active {
+  background: #fbbf24;
+  color: #0f172a;
+  border-color: #fbbf24;
+  font-weight: 600;
+}
+
+.pagination-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pagination-info {
+  color: #94a3b8;
+  font-size: 0.9rem;
+  margin-left: 0.5rem;
+}
+
 /* MODAL CHI TIẾT TRUYỆN */
 .admin-modal-overlay {
   position: fixed;
@@ -470,6 +529,7 @@
   justify-content: center;
   z-index: 1000;
   padding: 2rem;
+  overflow: auto;
 }
 
 .admin-modal {
@@ -555,9 +615,21 @@
   gap: 1rem;
 }
 
+.info-row:has(img) {
+  grid-template-columns: 1fr;
+}
+
 .info-row .label {
   font-weight: 600;
   color: #fbbf24;
+}
+
+.info-row img {
+  max-width: 200px;
+  height: auto;
+  border-radius: 8px;
+  border: 1px solid #334155;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 .chapters-section h4 {

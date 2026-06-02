@@ -1,5 +1,6 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
+import { getUserData } from "../utils/authUtils";
 
 const API_BASE = "http://localhost:4000";
 
@@ -56,8 +57,33 @@ export default function ChapterReader() {
 
   const saveReadingHistory = async (idln, chapter_id) => {
     try {
+      const user = getUserData();
+      if (!user) return; // Chỉ lưu nếu user đã đăng nhập
+
+      const userId = user.id || user.user_id;
+      const storageKey = `readingHistory_${userId}`;
+      
+      // 1. Lưu vào localStorage ngay lập tức (theo userId)
+      const history = JSON.parse(localStorage.getItem(storageKey)) || [];
+      
+      // Kiểm tra xem chapter này đã có trong history chưa
+      const alreadyExists = history.some(h => h.chapter_id === chapter_id);
+      
+      if (!alreadyExists) {
+        history.push({
+          chapter_id,
+          idln,
+          timestamp: new Date().toISOString()
+        });
+        localStorage.setItem(storageKey, JSON.stringify(history));
+        
+        // Phát event để chapterlist cập nhật ngay
+        window.dispatchEvent(new Event("readingHistoryUpdated"));
+      }
+
+      // 2. Gửi request lên server (async)
       const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-      if (!token) return; // Không lưu nếu chưa đăng nhập
+      if (!token) return; // Không lưu server nếu chưa đăng nhập
 
       await fetch(`${API_BASE}/api/history`, {
         method: 'POST',
@@ -324,7 +350,7 @@ export default function ChapterReader() {
   color: "#9ca3af",
   paddingTop: "1rem"
 }}>
-  <p>Chương {chapter.chapter_number} / {novel?.total_chapters || "?"} • {novel?.title || "Tiểu thuyết"}</p>
+  <p>Chương {chapter.chapter_number} / {novel?.volumes?.reduce((acc, vol) => acc + (vol.chapters?.length || 0), 0) || "?"} • {novel?.title || "Tiểu thuyết"}</p>
   {/* 💡 THÊM DÒNG NÀY: Để hiển thị thời gian đăng chương */}
   {chapter.created_at && (
     <p style={{ fontSize: "0.8rem", marginTop: "0.25rem" }}>

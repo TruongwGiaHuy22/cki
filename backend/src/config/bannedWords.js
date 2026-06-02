@@ -17,7 +17,7 @@ const BANNED_WORDS = [
   'douche', 'douchebag', 'moron', 'idiot', 'stupid', 'retard', 'hoe', 'choad', 'blowjob', 'handjob', 'anal',
 
   // Nhóm từ lóng/viết lại
-  'dkm', 'dmm', 'clgt', 'vll', 'l', 'c', 'f.u.c.k', 's.h.i.t', 'c.a.c', 'đ m', 'd.m', 'đ.m', 
+  'dkm', 'dmm', 'clgt', 'vll', 'f.u.c.k', 's.h.i.t', 'c.a.c', 'đ m', 'd.m', 'đ.m', 
   'djt', 'đjt'
 ];
 
@@ -36,6 +36,7 @@ function containsBannedWords(text) {
     // Dùng regex để match toàn từ (không match substring)
     const regex = new RegExp(`\\b${word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b|${word}`, 'gi');
     if (regex.test(lowerText)) {
+      console.log(`⚠️ Banned word detected: "${word}" in text: "${text}"`);
       return true;
     }
   }

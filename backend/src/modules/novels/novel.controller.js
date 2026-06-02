@@ -60,11 +60,14 @@ async function update(req, res, next) {
     if (isNaN(id) || id <= 0) {
       return res.status(400).json({ success: false, message: "Invalid novel ID" });
     }
+    console.log("📝 UPDATE REQUEST - Body:", JSON.stringify(req.body, null, 2));
     const payload = updateNovelSchema.parse(req.body);
+    console.log("✅ VALIDATED PAYLOAD:", JSON.stringify(payload, null, 2));
     const data = await service.update(id, payload);
     if (!data) return res.status(404).json({ success: false, message: "Novel not found" });
     res.json({ success: true, data });
   } catch (err) {
+    console.error("❌ UPDATE ERROR:", err.message);
     next(err);
   }
 }

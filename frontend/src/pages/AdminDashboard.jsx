@@ -10,22 +10,29 @@ const AdminDashboard = () => {
     const [activeTab, setActiveTab] = useState('dashboard');
     const [stats, setStats] = useState({ novels: 0, users: 0, comments: 0, pendingReports: 0 });
     const [novels, setNovels] = useState([]);
+    const [allNovels, setAllNovels] = useState([]);
+    const [allNovelsTotal, setAllNovelsTotal] = useState(0);
+    const [currentPage, setCurrentPage] = useState(1);
     const [users, setUsers] = useState([]);
     const [comments, setComments] = useState([]);
     const [genres, setGenres] = useState([]);
+    const [genresTotal, setGenresTotal] = useState(0);
+    const [genresCurrentPage, setGenresCurrentPage] = useState(1);
     const [reports, setReports] = useState([]);
-    const [announcements, setAnnouncements] = useState([]);
     const [bannedWords, setBannedWords] = useState([]);
     const [loading, setLoading] = useState(true);
     const [newGenre, setNewGenre] = useState({ ten_tl: '', slug: '' });
     const [editingGenre, setEditingGenre] = useState(null);
-    const [newAnnouncement, setNewAnnouncement] = useState({ title: '', content: '' });
     
     // Chi tiết truyện để duyệt
     const [showNovelDetail, setShowNovelDetail] = useState(false);
     const [selectedNovel, setSelectedNovel] = useState(null);
     const [selectedNovelChapters, setSelectedNovelChapters] = useState([]);
     const [loadingChapters, setLoadingChapters] = useState(false);
+
+    // Chi tiết báo cáo
+    const [showReportDetail, setShowReportDetail] = useState(false);
+    const [selectedReport, setSelectedReport] = useState(null);
 
     // Role mapping: Vietnamese DB roles ↔ English UI roles
     const roleMapping = {
@@ -47,8 +54,8 @@ const AdminDashboard = () => {
     };
 
     useEffect(() => {
-        const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-        const userData = localStorage.getItem('user') || sessionStorage.getItem('user');
+        const token = localStorage.getItem('admin_token') || sessionStorage.getItem('admin_token');
+        const userData = localStorage.getItem('admin_user') || sessionStorage.getItem('admin_user');
         
         if (!token || !userData) {
             navigate('/maychu/admin');
@@ -61,8 +68,10 @@ const AdminDashboard = () => {
             // Kiểm tra role có phải admin không
             if (user.role !== 'admin') {
                 alert('❌ Bạn không có quyền truy cập!');
-                localStorage.removeItem('token');
-                localStorage.removeItem('user');
+                localStorage.removeItem('admin_token');
+                localStorage.removeItem('admin_user');
+                sessionStorage.removeItem('admin_token');
+                sessionStorage.removeItem('admin_user');
                 navigate('/maychu/admin');
                 return;
             }
@@ -75,7 +84,7 @@ const AdminDashboard = () => {
     }, [navigate]);
 
     const getAuthHeaders = () => {
-        const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+        const token = localStorage.getItem('admin_token') || sessionStorage.getItem('admin_token');
         return {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
@@ -113,6 +122,24 @@ const AdminDashboard = () => {
         }
     };
 
+    const loadAllNovels = async (page = 1) => {
+        try {
+            const limit = 10;
+            const offset = (page - 1) * limit;
+            const res = await fetch(`${API_BASE}/admin/novels?limit=${limit}&offset=${offset}`, {
+                headers: getAuthHeaders()
+            });
+            if (res.ok) {
+                const data = await res.json();
+                setAllNovels(data.data || []);
+                setAllNovelsTotal(data.total || 0);
+                setCurrentPage(page);
+            }
+        } catch (err) {
+            console.error('Error loading all novels:', err);
+        }
+    };
+
     const loadUsers = async () => {
         try {
             const res = await fetch(`${API_BASE}/admin/users`, {
@@ -141,14 +168,18 @@ const AdminDashboard = () => {
         }
     };
 
-    const loadGenres = async () => {
+    const loadGenres = async (page = 1) => {
         try {
-            const res = await fetch(`${API_BASE}/admin/genres`, {
+            const limit = 10;
+            const offset = (page - 1) * limit;
+            const res = await fetch(`${API_BASE}/admin/genres?limit=${limit}&offset=${offset}`, {
                 headers: getAuthHeaders()
             });
             if (res.ok) {
                 const data = await res.json();
                 setGenres(data.data || []);
+                setGenresTotal(data.total || 0);
+                setGenresCurrentPage(page);
             }
         } catch (err) {
             console.error('Error loading genres:', err);
@@ -166,20 +197,6 @@ const AdminDashboard = () => {
             }
         } catch (err) {
             console.error('Error loading reports:', err);
-        }
-    };
-
-    const loadAnnouncements = async () => {
-        try {
-            const res = await fetch(`${API_BASE}/admin/announcements`, {
-                headers: getAuthHeaders()
-            });
-            if (res.ok) {
-                const data = await res.json();
-                setAnnouncements(data.data || []);
-            }
-        } catch (err) {
-            console.error('Error loading announcements:', err);
         }
     };
 
@@ -243,12 +260,43 @@ const AdminDashboard = () => {
         }
     };
 
+    const handleDeleteNovelFromManage = async (id, title) => {
+        if (!window.confirm(`Xác nhận xóa truyện "${title}" này?`)) return;
+        try {
+            const res = await fetch(`${API_BASE}/admin/novels/${id}`, {
+                method: 'DELETE',
+                headers: getAuthHeaders()
+            });
+            if (res.ok) {
+                alert('✅ Truyện đã bị xóa!');
+                // Reload từ page hiện tại, nếu không có dữ liệu thì về page trước
+                const newTotal = allNovelsTotal - 1;
+                const maxPage = Math.ceil(newTotal / 10);
+                const pageToLoad = currentPage <= maxPage ? currentPage : Math.max(1, maxPage);
+                loadAllNovels(pageToLoad);
+            } else {
+                alert('❌ Lỗi xóa truyện');
+            }
+        } catch (err) {
+            alert('❌ Lỗi xóa truyện');
+        }
+    };
+
     // Xem chi tiết truyện + chapters
     const handleViewNovelDetail = async (novel) => {
-        setSelectedNovel(novel);
         setShowNovelDetail(true);
         setLoadingChapters(true);
         try {
+            // Load chi tiết truyện (để có đầy đủ genres, cover, etc.)
+            const novelRes = await fetch(`${API_BASE}/novels/${novel.idln}`);
+            if (novelRes.ok) {
+                const novelData = await novelRes.json();
+                setSelectedNovel(novelData.data || novel);
+            } else {
+                setSelectedNovel(novel);
+            }
+            
+            // Load chapters
             const res = await fetch(`${API_BASE}/chapters/novel/${novel.idln}`, {
                 headers: getAuthHeaders()
             });
@@ -259,7 +307,8 @@ const AdminDashboard = () => {
                 setSelectedNovelChapters([]);
             }
         } catch (err) {
-            console.error('Lỗi tải chapters:', err);
+            console.error('Lỗi tải chi tiết truyện:', err);
+            setSelectedNovel(novel);
             setSelectedNovelChapters([]);
         } finally {
             setLoadingChapters(false);
@@ -326,16 +375,25 @@ const AdminDashboard = () => {
 
     const handleChangeRole = async (id, newRole) => {
         try {
+            console.log(`🔄 Changing role - User ID: ${id}, Role: "${newRole}"`);
+            
             const res = await fetch(`${API_BASE}/admin/users/${id}/role`, {
                 method: 'PATCH',
                 headers: getAuthHeaders(),
                 body: JSON.stringify({ role: newRole })
             });
+            
+            const responseData = await res.json();
+            console.log(`📥 Response status: ${res.status}`, responseData);
+            
             if (res.ok) {
                 alert(`✅ Đổi vai trò thành ${newRole}!`);
                 loadUsers();
+            } else {
+                alert(`❌ Lỗi đổi vai trò: ${responseData.message || 'Không rõ'}`);
             }
         } catch (err) {
+            console.error(`❌ Exception:`, err);
             alert('❌ Lỗi đổi vai trò');
         }
     };
@@ -456,48 +514,52 @@ const AdminDashboard = () => {
         }
     };
 
-    const handleCreateAnnouncement = async () => {
-        if (!newAnnouncement.title || !newAnnouncement.content) {
-            alert('⚠️ Nhập tiêu đề và nội dung!');
-            return;
-        }
+    const handleViewReport = async (id) => {
         try {
-            const res = await fetch(`${API_BASE}/admin/announcements`, {
-                method: 'POST',
-                headers: getAuthHeaders(),
-                body: JSON.stringify(newAnnouncement)
+            console.log('Fetching report detail:', id);
+            const res = await fetch(`${API_BASE}/admin/reports/${id}`, {
+                headers: getAuthHeaders()
             });
+            console.log('Response status:', res.status);
+            
             if (res.ok) {
-                alert('✅ Thông báo đã được đăng!');
-                setNewAnnouncement({ title: '', content: '' });
-                loadAnnouncements();
+                const data = await res.json();
+                console.log('Report data:', data);
+                setSelectedReport(data.data);
+                setShowReportDetail(true);
+            } else {
+                const errorData = await res.json();
+                console.error('Error response:', errorData);
+                alert(`❌ ${errorData.message || 'Lỗi tải chi tiết báo cáo'}`);
             }
         } catch (err) {
-            alert('❌ Lỗi đăng thông báo');
+            console.error('Fetch error:', err);
+            alert('❌ Lỗi kết nối: ' + err.message);
         }
     };
 
-    const handleDeleteAnnouncement = async (id) => {
-        if (!window.confirm('Xác nhận xóa thông báo?')) return;
-        try {
-            const res = await fetch(`${API_BASE}/admin/announcements/${id}`, {
-                method: 'DELETE',
-                headers: getAuthHeaders()
-            });
-            if (res.ok) {
-                alert('✅ Thông báo đã bị xóa!');
-                loadAnnouncements();
-            }
-        } catch (err) {
-            alert('❌ Lỗi xóa thông báo');
-        }
+    const handleCloseReportDetail = () => {
+        setShowReportDetail(false);
+        setSelectedReport(null);
     };
 
     const handleLogout = () => {
+        // Clear admin tokens first (before navigation)
+        localStorage.removeItem('admin_token');
+        localStorage.removeItem('admin_user');
+        sessionStorage.removeItem('admin_token');
+        sessionStorage.removeItem('admin_user');
+        
+        // Also clear any leftover user tokens
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         sessionStorage.removeItem('token');
         sessionStorage.removeItem('user');
+        
+        // Clear state
+        setUser(null);
+        
+        // Navigate after clearing
         navigate('/maychu/admin');
     };
 
@@ -507,9 +569,14 @@ const AdminDashboard = () => {
 
     const handleTabChange = (tab) => {
         setActiveTab(tab);
+        setShowNovelDetail(false); // Đóng modal khi chuyển tab
         switch(tab) {
             case 'novels':
                 loadPendingNovels();
+                break;
+            case 'manage-novels':
+                setCurrentPage(1);
+                loadAllNovels(1);
                 break;
             case 'users':
                 loadUsers();
@@ -522,9 +589,6 @@ const AdminDashboard = () => {
                 break;
             case 'reports':
                 loadReports();
-                break;
-            case 'announcements':
-                loadAnnouncements();
                 break;
             case 'banned-words':
                 loadBannedWords();
@@ -555,6 +619,12 @@ const AdminDashboard = () => {
                         📚 Duyệt Truyện
                     </button>
                     <button 
+                        className={`admin-nav-item ${activeTab === 'manage-novels' ? 'active' : ''}`}
+                        onClick={() => handleTabChange('manage-novels')}
+                    >
+                        📖 Quản Lý Truyện
+                    </button>
+                    <button 
                         className={`admin-nav-item ${activeTab === 'users' ? 'active' : ''}`}
                         onClick={() => handleTabChange('users')}
                     >
@@ -576,13 +646,7 @@ const AdminDashboard = () => {
                         className={`admin-nav-item ${activeTab === 'reports' ? 'active' : ''}`}
                         onClick={() => handleTabChange('reports')}
                     >
-                        📋 Báo Cáo Vi Phạm
-                    </button>
-                    <button 
-                        className={`admin-nav-item ${activeTab === 'announcements' ? 'active' : ''}`}
-                        onClick={() => handleTabChange('announcements')}
-                    >
-                        📢 Thông Báo
+                        📋 Báo Lỗi & Góp Ý
                     </button>
                     <button 
                         className={`admin-nav-item ${activeTab === 'banned-words' ? 'active' : ''}`}
@@ -675,6 +739,92 @@ const AdminDashboard = () => {
                         </div>
                     )}
 
+                    {/* QUẢN LÝ TRUYỆN */}
+                    {activeTab === 'manage-novels' && (
+                        <div className="admin-section">
+                            <h2>📖 Quản Lý Truyện</h2>
+                            {allNovels.length === 0 ? (
+                                <p>Không có truyện</p>
+                            ) : (
+                                <div>
+                                    <p className="admin-total">Tổng cộng: {allNovelsTotal} truyện</p>
+                                    <table className="admin-table">
+                                        <thead>
+                                            <tr>
+                                                <th>ID</th>
+                                                <th>Tên Truyện</th>
+                                                <th>Tác Giả</th>
+                                                <th>Loại</th>
+                                                <th>Trạng Thái</th>
+                                                <th>Chương</th>
+                                                <th>Lượt Xem</th>
+                                                <th>Duyệt</th>
+                                                <th>Hành Động</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {allNovels.map(novel => (
+                                                <tr key={novel.idln}>
+                                                    <td>#{novel.idln}</td>
+                                                    <td><strong>{novel.title}</strong></td>
+                                                    <td>{novel.author}</td>
+                                                    <td>{novel.type || 'Truyện dịch'}</td>
+                                                    <td>{novel.statuss || 'Đang tiến hành'}</td>
+                                                    <td>{novel.total_chapters || 0}</td>
+                                                    <td>{novel.view_count || 0}</td>
+                                                    <td>{novel.active ? '✅ Đã duyệt' : '❌ Chưa duyệt'}</td>
+                                                    <td>
+                                                        <button 
+                                                            className="btn-delete" 
+                                                            onClick={() => handleDeleteNovelFromManage(novel.idln, novel.title)}
+                                                        >
+                                                            🗑️ Xóa
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                    
+                                    {/* PAGINATION */}
+                                    {allNovelsTotal > 10 && (
+                                        <div className="pagination">
+                                            <button 
+                                                className="pagination-btn"
+                                                onClick={() => loadAllNovels(currentPage - 1)}
+                                                disabled={currentPage === 1}
+                                            >
+                                                ← Trước
+                                            </button>
+                                            
+                                            {Array.from({ length: Math.ceil(allNovelsTotal / 10) }, (_, i) => i + 1).map(page => (
+                                                <button 
+                                                    key={page}
+                                                    className={`pagination-btn ${currentPage === page ? 'active' : ''}`}
+                                                    onClick={() => loadAllNovels(page)}
+                                                >
+                                                    {page}
+                                                </button>
+                                            ))}
+                                            
+                                            <button 
+                                                className="pagination-btn"
+                                                onClick={() => loadAllNovels(currentPage + 1)}
+                                                disabled={currentPage === Math.ceil(allNovelsTotal / 10)}
+                                            >
+                                                Sau →
+                                            </button>
+                                            
+                                            <span className="pagination-info">
+                                                Trang {currentPage} / {Math.ceil(allNovelsTotal / 10)}
+                                            </span>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    )}
+
                     {/* QUẢN LÝ USERS */}
                     {activeTab === 'users' && (
                         <div className="admin-section">
@@ -712,6 +862,7 @@ const AdminDashboard = () => {
                                                         className="admin-select"
                                                     >
                                                         <option value="user">User</option>
+                                                        <option value="author">Author</option>
                                                         <option value="moderator">Moderator</option>
                                                         <option value="admin">Admin</option>
                                                     </select>
@@ -827,36 +978,125 @@ const AdminDashboard = () => {
                                     </tbody>
                                 </table>
                             )}
+                            
+                            {/* PAGINATION */}
+                            {genresTotal > 10 && (
+                                <div className="pagination">
+                                    <button 
+                                        className="pagination-btn"
+                                        onClick={() => loadGenres(genresCurrentPage - 1)}
+                                        disabled={genresCurrentPage === 1}
+                                    >
+                                        ← Trước
+                                    </button>
+                                    
+                                    {Array.from({ length: Math.ceil(genresTotal / 10) }, (_, i) => i + 1).map(page => (
+                                        <button 
+                                            key={page}
+                                            className={`pagination-btn ${genresCurrentPage === page ? 'active' : ''}`}
+                                            onClick={() => loadGenres(page)}
+                                        >
+                                            {page}
+                                        </button>
+                                    ))}
+                                    
+                                    <button 
+                                        className="pagination-btn"
+                                        onClick={() => loadGenres(genresCurrentPage + 1)}
+                                        disabled={genresCurrentPage >= Math.ceil(genresTotal / 10)}
+                                    >
+                                        Sau →
+                                    </button>
+                                    
+                                    <span className="pagination-info">
+                                        Trang {genresCurrentPage} / {Math.ceil(genresTotal / 10)}
+                                    </span>
+                                </div>
+                            )}
                         </div>
                     )}
 
                     {/* BÁO CÁO VI PHẠM */}
                     {activeTab === 'reports' && (
                         <div className="admin-section">
-                            <h2>📋 Báo Cáo Vi Phạm</h2>
+                            <h2>📋 Báo Lỗi / Góp Ý từ Người Dùng</h2>
+                            <div style={{marginBottom: '20px'}}>
+                                <span style={{color: '#10b981', marginRight: '20px'}}>
+                                    🟢 Đang chờ: <strong>{reports.filter(r => r.statuss === 'Đang chờ').length}</strong>
+                                </span>
+                                <span style={{color: '#f59e0b', marginRight: '20px'}}>
+                                    🟡 Đã xử lý: <strong>{reports.filter(r => r.statuss === 'Đã xử lý').length}</strong>
+                                </span>
+                                <span style={{color: '#ef4444'}}>
+                                    🔴 Từ chối: <strong>{reports.filter(r => r.statuss === 'Từ chối').length}</strong>
+                                </span>
+                            </div>
                             {reports.length === 0 ? (
-                                <p>Không có báo cáo nào</p>
+                                <p style={{color: '#999'}}>✅ Không có báo lỗi nào cần xử lý</p>
                             ) : (
                                 <table className="admin-table">
                                     <thead>
                                         <tr>
-                                            <th>Người Báo Cáo</th>
+                                            <th>Người Báo</th>
                                             <th>Loại</th>
-                                            <th>Lý Do</th>
+                                            <th>Nội Dung</th>
                                             <th>Trạng Thái</th>
+                                            <th>Ngày Tạo</th>
                                             <th>Hành Động</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {reports.map(report => (
-                                            <tr key={report.id}>
-                                                <td>{report.username}</td>
-                                                <td>{report.report_type}</td>
-                                                <td>{report.reason}</td>
-                                                <td>{report.status}</td>
+                                            <tr 
+                                                key={report.report_id}
+                                                onClick={() => handleViewReport(report.report_id)}
+                                                style={{cursor: 'pointer', transition: 'background 0.2s'}}
+                                                onMouseEnter={(e) => e.currentTarget.style.background = '#2a2d36'}
+                                                onMouseLeave={(e) => e.currentTarget.style.background = ''}
+                                            >
+                                                <td>{report.user_name || 'Ẩn danh'}</td>
+                                                <td>📝 Báo cáo</td>
+                                                <td style={{maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>
+                                                    {report.reason}
+                                                </td>
                                                 <td>
-                                                    <button className="btn-approve" onClick={() => handleResolveReport(report.id, 'resolved')}>✅ Xử Lý</button>
-                                                    <button className="btn-reject" onClick={() => handleResolveReport(report.id, 'rejected')}>❌ Từ Chối</button>
+                                                    <span style={{
+                                                        padding: '4px 8px',
+                                                        borderRadius: '4px',
+                                                        fontSize: '0.9rem',
+                                                        backgroundColor: report.statuss === 'Đang chờ' ? '#10b98122' : 
+                                                                        report.statuss === 'Đã xử lý' ? '#f59e0b22' : '#ef444422',
+                                                        color: report.statuss === 'Đang chờ' ? '#10b981' : 
+                                                               report.statuss === 'Đã xử lý' ? '#f59e0b' : '#ef4444'
+                                                    }}>
+                                                        {report.statuss}
+                                                    </span>
+                                                </td>
+                                                <td>{new Date(report.created_at).toLocaleDateString('vi-VN')}</td>
+                                                <td style={{display: 'flex', gap: '8px'}}>
+                                                    {report.statuss === 'Đang chờ' && (
+                                                        <>
+                                                            <button 
+                                                                className="btn-approve" 
+                                                                onClick={() => handleResolveReport(report.report_id, 'Đã xử lý')}
+                                                                style={{padding: '6px 12px', fontSize: '0.9rem'}}
+                                                            >
+                                                                ✅ Xử Lý
+                                                            </button>
+                                                            <button 
+                                                                className="btn-reject" 
+                                                                onClick={() => handleResolveReport(report.report_id, 'Từ chối')}
+                                                                style={{padding: '6px 12px', fontSize: '0.9rem'}}
+                                                            >
+                                                                ❌ Từ Chối
+                                                            </button>
+                                                        </>
+                                                    )}
+                                                    {report.statuss !== 'Đang chờ' && (
+                                                        <span style={{color: '#999', fontSize: '0.9rem'}}>
+                                                            {report.statuss === 'Đã xử lý' ? '✔️ Đã xử lý' : '✖️ Bị từ chối'}
+                                                        </span>
+                                                    )}
                                                 </td>
                                             </tr>
                                         ))}
@@ -866,43 +1106,7 @@ const AdminDashboard = () => {
                         </div>
                     )}
 
-                    {/* THÔNG BÁO HỆ THỐNG */}
-                    {activeTab === 'announcements' && (
-                        <div className="admin-section">
-                            <h2>📢 Thông Báo Hệ Thống</h2>
-                            <div className="admin-form" style={{marginBottom: '2rem', display: 'flex', flexDirection: 'column', gap: '1rem'}}>
-                                <input 
-                                    type="text" 
-                                    placeholder="Tiêu đề thông báo"
-                                    value={newAnnouncement.title}
-                                    onChange={(e) => setNewAnnouncement({...newAnnouncement, title: e.target.value})}
-                                    className="admin-input"
-                                />
-                                <textarea 
-                                    placeholder="Nội dung thông báo"
-                                    value={newAnnouncement.content}
-                                    onChange={(e) => setNewAnnouncement({...newAnnouncement, content: e.target.value})}
-                                    className="admin-textarea"
-                                    rows="4"
-                                />
-                                <button className="btn-add" onClick={handleCreateAnnouncement}>📮 Đăng Thông Báo</button>
-                            </div>
-                            {announcements.length === 0 ? (
-                                <p>Chưa có thông báo nào</p>
-                            ) : (
-                                <div className="admin-announcements">
-                                    {announcements.map(ann => (
-                                        <div key={ann.post_id} className="announcement-card">
-                                            <h4>{ann.title}</h4>
-                                            <p>{ann.content}</p>
-                                            <small>Bởi: {ann.username} - {new Date(ann.created_at).toLocaleDateString('vi-VN')}</small>
-                                            <button className="btn-delete" onClick={() => handleDeleteAnnouncement(ann.post_id)}>🗑️ Xóa</button>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                    )}
+
 
                     {/* TỪ CẤM */}
                     {activeTab === 'banned-words' && (
@@ -937,6 +1141,21 @@ const AdminDashboard = () => {
                         </div>
 
                         <div className="admin-modal-body">
+                            {/* Ảnh bìa */}
+                            {selectedNovel.cover && (
+                                <div className="info-row" style={{marginBottom: '1.5rem'}}>
+                                    <span className="label">Ảnh Bìa:</span>
+                                    <div style={{marginTop: '0.5rem'}}>
+                                        <img 
+                                            src={`http://localhost:4000/uploads/${selectedNovel.cover}`} 
+                                            alt="Cover" 
+                                            style={{maxWidth: '200px', maxHeight: '300px', borderRadius: '8px', border: '1px solid #ddd'}}
+                                            onError={(e) => {e.target.src = 'https://via.placeholder.com/200x300?text=No+Cover'; e.target.style.maxWidth = '200px';}}
+                                        />
+                                    </div>
+                                </div>
+                            )}
+
                             {/* Thông tin cơ bản */}
                             <div className="novel-info">
                                 <div className="info-row">
@@ -948,8 +1167,18 @@ const AdminDashboard = () => {
                                     <span>{selectedNovel.authordraw || 'N/A'}</span>
                                 </div>
                                 <div className="info-row">
-                                    <span className="label">Loại:</span>
-                                    <span>{selectedNovel.type}</span>
+                                    <span className="label">Loại Truyện:</span>
+                                    <span>{selectedNovel.type || 'N/A'}</span>
+                                </div>
+                                <div className="info-row">
+                                    <span className="label">Thể Loại:</span>
+                                    <span>
+                                        {selectedNovel.novel_genres && selectedNovel.novel_genres.length > 0 
+                                            ? selectedNovel.novel_genres.map(g => g.ten_tl).join(', ') 
+                                            : selectedNovel.genres && selectedNovel.genres.length > 0
+                                            ? selectedNovel.genres.join(', ')
+                                            : 'Chưa có thể loại'}
+                                    </span>
                                 </div>
                                 <div className="info-row">
                                     <span className="label">Mô Tả:</span>
@@ -992,6 +1221,93 @@ const AdminDashboard = () => {
                             <button className="btn-approve" onClick={handleApproveNovelFromModal}>
                                 ✅ Duyệt Truyện
                             </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* MODAL CHI TIẾT BÁO CÁO */}
+            {showReportDetail && selectedReport && (
+                <div className="admin-modal-overlay" onClick={handleCloseReportDetail}>
+                    <div className="admin-modal" onClick={(e) => e.stopPropagation()} style={{maxWidth: '600px'}}>
+                        <div className="admin-modal-header">
+                            <h3>📋 Chi Tiết Báo Cáo #{selectedReport.report_id}</h3>
+                            <button className="admin-modal-close" onClick={handleCloseReportDetail}>✕</button>
+                        </div>
+
+                        <div className="admin-modal-body">
+                            <div className="info-row">
+                                <span className="label">Người Báo Cáo:</span>
+                                <span>{selectedReport.user_name || 'Ẩn danh'}</span>
+                            </div>
+                            <div className="info-row">
+                                <span className="label">Ngày Tạo:</span>
+                                <span>{new Date(selectedReport.created_at).toLocaleString('vi-VN')}</span>
+                            </div>
+                            <div className="info-row">
+                                <span className="label">Trạng Thái:</span>
+                                <span style={{
+                                    padding: '4px 12px',
+                                    borderRadius: '4px',
+                                    backgroundColor: selectedReport.statuss === 'Đang chờ' ? '#10b98122' : 
+                                                    selectedReport.statuss === 'Đã xử lý' ? '#f59e0b22' : '#ef444422',
+                                    color: selectedReport.statuss === 'Đang chờ' ? '#10b981' : 
+                                           selectedReport.statuss === 'Đã xử lý' ? '#f59e0b' : '#ef4444',
+                                    fontWeight: '600'
+                                }}>
+                                    {selectedReport.statuss}
+                                </span>
+                            </div>
+                            <div className="info-row">
+                                <span className="label">Nội Dung:</span>
+                                <div style={{
+                                    background: '#181a20',
+                                    padding: '12px',
+                                    borderRadius: '6px',
+                                    marginTop: '8px',
+                                    color: '#cbd5e1',
+                                    maxHeight: '250px',
+                                    overflow: 'auto',
+                                    whiteSpace: 'pre-wrap',
+                                    wordWrap: 'break-word',
+                                    lineHeight: '1.6'
+                                }}>
+                                    {selectedReport.reason}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="admin-modal-footer">
+                            {selectedReport.statuss === 'Đang chờ' && (
+                                <>
+                                    <button 
+                                        className="btn-reject" 
+                                        onClick={() => {
+                                            handleResolveReport(selectedReport.report_id, 'Từ chối');
+                                            handleCloseReportDetail();
+                                        }}
+                                    >
+                                        ❌ Từ Chối
+                                    </button>
+                                    <button 
+                                        className="btn-approve" 
+                                        onClick={() => {
+                                            handleResolveReport(selectedReport.report_id, 'Đã xử lý');
+                                            handleCloseReportDetail();
+                                        }}
+                                    >
+                                        ✅ Đánh Dấu Đã Xử Lý
+                                    </button>
+                                </>
+                            )}
+                            {selectedReport.statuss !== 'Đang chờ' && (
+                                <button 
+                                    className="btn-approve" 
+                                    onClick={handleCloseReportDetail}
+                                >
+                                    Đóng
+                                </button>
+                            )}
                         </div>
                     </div>
                 </div>

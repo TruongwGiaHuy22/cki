@@ -6,7 +6,8 @@ async function getDashboardStats() {
     const [[novelCount]] = await pool.query("SELECT COUNT(*) as count FROM QLTT");
     const [[userCount]] = await pool.query("SELECT COUNT(*) as count FROM users");
     const [[commentCount]] = await pool.query("SELECT COUNT(*) as count FROM comments");
-    const [[reportCount]] = await pool.query("SELECT COUNT(*) as count FROM reports WHERE status = 'pending'");
+    // Count error reports and feedback
+    const [[reportCount]] = await pool.query("SELECT COUNT(*) as count FROM reports");
 
     return {
       novels: novelCount?.count || 0,
@@ -34,6 +35,27 @@ async function getPendingNovels() {
     return novels;
   } catch (err) {
     console.error("❌ Error getPendingNovels:", err.message);
+    throw err;
+  }
+}
+
+async function getAllNovels(limit = 50, offset = 0) {
+  try {
+    const [novels] = await pool.query(`
+      SELECT q.idln, q.title, q.author, q.authordraw, q.cover, 
+             q.description, q.type, q.statuss, q.total_chapters, q.view_count,
+             q.active, q.created_by, q.created_at, u.username as creator
+      FROM QLTT q
+      LEFT JOIN users u ON q.created_by = u.user_id
+      ORDER BY q.created_at DESC
+      LIMIT ? OFFSET ?
+    `, [limit, offset]);
+    
+    const [[count]] = await pool.query("SELECT COUNT(*) as total FROM QLTT");
+    
+    return { novels, total: count?.total || 0 };
+  } catch (err) {
+    console.error("❌ Error getAllNovels:", err.message);
     throw err;
   }
 }
@@ -251,10 +273,11 @@ async function rejectComment(commentId) {
 }
 
 /* ==================== GENRE MANAGEMENT ==================== */
-async function getAllGenres() {
+async function getAllGenres(limit = 10, offset = 0) {
   try {
-    const [genres] = await pool.query("SELECT id_tl, ten_tl, slug FROM theloai ORDER BY id_tl");
-    return genres;
+    const [genres] = await pool.query("SELECT id_tl, ten_tl, slug FROM theloai ORDER BY id_tl LIMIT ? OFFSET ?", [limit, offset]);
+    const [[count]] = await pool.query("SELECT COUNT(*) as total FROM theloai");
+    return { genres, total: count?.total || 0 };
   } catch (err) {
     console.error("❌ Error getAllGenres:", err.message);
     throw err;
@@ -305,10 +328,15 @@ async function deleteGenre(genreId) {
 async function getReports(limit = 20, offset = 0) {
   try {
     const [reports] = await pool.query(`
-      SELECT r.id, r.reported_by, r.reported_item_id, r.report_type, 
-             r.reason, r.status, r.created_at, u.username
+      SELECT 
+        r.report_id,
+        r.user_id,
+        r.reason,
+        r.statuss,
+        r.created_at,
+        u.username as user_name
       FROM reports r
-      LEFT JOIN users u ON r.reported_by = u.user_id
+      LEFT JOIN users u ON r.user_id = u.user_id
       ORDER BY r.created_at DESC
       LIMIT ? OFFSET ?
     `, [limit, offset]);
@@ -323,12 +351,34 @@ async function getReports(limit = 20, offset = 0) {
 async function resolveReport(reportId, status, notes) {
   try {
     await pool.query(
-      "UPDATE reports SET status = ?, notes = ?, resolved_at = NOW() WHERE id = ?",
-      [status, notes, reportId]
+      "UPDATE reports SET statuss = ? WHERE report_id = ?",
+      [status, reportId]
     );
     return { success: true, message: "Report resolved" };
   } catch (err) {
     console.error("❌ Error resolveReport:", err.message);
+    throw err;
+  }
+}
+
+async function getReportDetail(reportId) {
+  try {
+    const [report] = await pool.query(`
+      SELECT 
+        r.report_id,
+        r.user_id,
+        r.reason,
+        r.statuss,
+        r.created_at,
+        u.username as user_name
+      FROM reports r
+      LEFT JOIN users u ON r.user_id = u.user_id
+      WHERE r.report_id = ?
+    `, [reportId]);
+
+    return report[0] || null;
+  } catch (err) {
+    console.error("❌ Error getReportDetail:", err.message);
     throw err;
   }
 }
@@ -380,6 +430,7 @@ async function deleteAnnouncement(announcementId) {
 module.exports = {
   getDashboardStats,
   getPendingNovels,
+  getAllNovels,
   approveNovel,
   rejectNovel,
   deleteNovelAsAdmin,
@@ -396,6 +447,7 @@ module.exports = {
   deleteGenre,
   getReports,
   resolveReport,
+  getReportDetail,
   getAnnouncements,
   createAnnouncement,
   deleteAnnouncement,

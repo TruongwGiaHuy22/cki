@@ -1,4 +1,6 @@
 import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { getUserData } from "../utils/authUtils";
 
 // Hàm format ngày thành DD/MM/YYYY
 function formatDate(dateString) {
@@ -15,6 +17,37 @@ function formatDate(dateString) {
 }
 
 export default function ChapterList({ chapters = [], volumes = [] }) {
+  const [readingHistory, setReadingHistory] = useState([]);
+
+  // Lấy danh sách chương đã đọc từ localStorage (theo user hiện tại)
+  useEffect(() => {
+    const loadHistory = () => {
+      try {
+        const user = getUserData();
+        if (!user) {
+          // Nếu chưa đăng nhập thì không hiển thị reading history
+          setReadingHistory([]);
+          return;
+        }
+
+        const userId = user.id || user.user_id;
+        const storageKey = `readingHistory_${userId}`;
+        const history = JSON.parse(localStorage.getItem(storageKey)) || [];
+        setReadingHistory(history.map(h => h.chapter_id));
+      } catch {
+        setReadingHistory([]);
+      }
+    };
+
+    loadHistory();
+
+    // Lắng nghe event từ chapterreader khi có update
+    window.addEventListener("readingHistoryUpdated", loadHistory);
+
+    return () => {
+      window.removeEventListener("readingHistoryUpdated", loadHistory);
+    };
+  }, []);
   // Đồng bộ cấu trúc dữ liệu theo database thực tế của bạn
   const groupedVolumes = Array.isArray(volumes) && volumes.length > 0
     ? volumes // Hiển thị toàn bộ các volume thay vì chỉ ép lấy volumes[0] nếu cần
@@ -39,6 +72,9 @@ export default function ChapterList({ chapters = [], volumes = [] }) {
                 // Lấy key và ID an toàn cho Chapter theo database thực tế (chapter_id)
                 const currentChId = ch.chapter_id || ch.id;
                 const uniqueChKey = currentChId ? `ch-${currentChId}` : `ch-idx-${chIdx}`;
+                
+                // Kiểm tra nếu chương đã đọc
+                const isRead = readingHistory.includes(currentChId);
 
                 return (
                   <li key={uniqueChKey} style={{ margin: "0.4rem 0" }}>
@@ -47,11 +83,27 @@ export default function ChapterList({ chapters = [], volumes = [] }) {
                       <Link 
                         to={`/chapter/${currentChId}`} 
                         className="chapterlist-text-blue-500"
-                        style={{ textDecoration: "none", color: "#3b82f6", flex: 1 }}
+                        onClick={() => {
+                          // Khi bấm vào đọc, phát sự kiện yêu cầu ẩn thông tin xuất bản trên trang chi tiết
+                          window.dispatchEvent(new Event('hidePublish'));
+                        }}
+                        style={{ 
+                          textDecoration: "none", 
+                          color: isRead ? "#9ca3af" : "#3b82f6",
+                          opacity: isRead ? 0.6 : 1,
+                          flex: 1,
+                          transition: "all 0.2s ease"
+                        }}
                       >
                         {ch.title || `Chương ${ch.chapter_number || (chIdx + 1)}`}
                       </Link>
-                      <span style={{ fontSize: "0.85rem", color: "#94a3b8", marginLeft: "1rem", whiteSpace: "nowrap" }}>
+                      <span style={{ 
+                        fontSize: "0.85rem", 
+                        color: isRead ? "#cbd5e1" : "#94a3b8", 
+                        marginLeft: "1rem", 
+                        whiteSpace: "nowrap",
+                        opacity: isRead ? 0.6 : 1
+                      }}>
                         {formatDate(ch.created_at)}
                       </span>
                     </div>

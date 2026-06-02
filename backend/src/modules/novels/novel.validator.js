@@ -11,6 +11,7 @@ const createNovelSchema = z.object({
   statuss: z.enum(["Đang tiến hành", "Hoàn thành", "Tạm ngưng"]).default("Đang tiến hành"),
   age_limit: z.coerce.number().int().min(0).max(21).default(0),
   genres: z.array(z.coerce.number().int()),
+  purchase_link: z.string().max(1000).optional().default(""),
 });
 
 const updateNovelSchema = createNovelSchema.partial();

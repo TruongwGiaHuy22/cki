@@ -14,12 +14,15 @@ import DanhSachSangTac from "./pages/DanhSachSangtac.jsx";
 import DanhSachAI from "./pages/DanhSachAI.jsx";
 import DangTruyen from "./pages/DangTruyen.jsx";
 import QuanLyTruyen from "./pages/quanlytruyen.jsx";
+import QuanLyXuatBan from "./pages/QuanLyXuatBan.jsx";
+import QuanLyComment from "./pages/QuanLyComment.jsx";
 import Introduction from "./compoment/Introduction.jsx";
 import ErrorReport from "./compoment/ErrorReport.jsx";
 import TermsOfService from "./compoment/TermsOfService.jsx";
 import PrivacyPolicy from "./compoment/PrivacyPolicy.jsx";
 import ForumCreate from "./pages/ForumCreate.jsx";
 import ReadingHistory from "./pages/ReadingHistory.jsx";
+import Bookmarks from "./pages/Bookmarks.jsx";
 import AdminDashboard from "./pages/AdminDashboard.jsx";
 import AdminLogin from "./pages/AdminLogin.jsx";
 function AppLayout() {
@@ -58,12 +61,15 @@ function AppLayout() {
           <Route path="/xuatban" element={<XuatBan />} />
           <Route path="/dang-truyen" element={<DangTruyen />} />
           <Route path="/quan-ly-truyen" element={<QuanLyTruyen />} />
+          <Route path="/quan-ly-xuat-ban" element={<QuanLyXuatBan />} />
+          <Route path="/quan-ly-comment" element={<QuanLyComment />} />
           <Route path="/introduction" element={<Introduction />} />
           <Route path="/error-report" element={<ErrorReport />} />
           <Route path="/terms-of-service" element={<TermsOfService />} />
           <Route path="/privacy-policy" element={<PrivacyPolicy />} />
           <Route path="/forum/create" element={<ForumCreate />} />
           <Route path="/history" element={<ReadingHistory />} />
+          <Route path="/bookmarks" element={<Bookmarks />} />
         </Routes>
       </main>
       {!isLoginPage && !isRegisterPage && <Footer />}
