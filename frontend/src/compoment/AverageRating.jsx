@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import './AverageRating.css';
 
 const AverageRating = ({ novelId, onRatingClick }) => {
   const [ratingData, setRatingData] = useState(null);

@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import './AdminDashboard.css';
 
 const API_BASE = 'http://localhost:4000/api';
 
@@ -23,6 +22,20 @@ const AdminDashboard = () => {
     const [loading, setLoading] = useState(true);
     const [newGenre, setNewGenre] = useState({ ten_tl: '', slug: '' });
     const [editingGenre, setEditingGenre] = useState(null);
+    
+    // Forum posts management
+    const [forumPosts, setForumPosts] = useState([]);
+    const [forumPostsTotal, setForumPostsTotal] = useState(0);
+    const [forumPostsPage, setForumPostsPage] = useState(1);
+    const [showForumPostDetail, setShowForumPostDetail] = useState(false);
+    const [selectedForumPost, setSelectedForumPost] = useState(null);
+    const [forumPostComments, setForumPostComments] = useState([]);
+    const [loadingForumComments, setLoadingForumComments] = useState(false);
+    
+    // Published novels management
+    const [publishedNovels, setPublishedNovels] = useState([]);
+    const [publishedNovelsTotal, setPublishedNovelsTotal] = useState(0);
+    const [publishedNovelsPage, setPublishedNovelsPage] = useState(1);
     
     // Chi tiết truyện để duyệt
     const [showNovelDetail, setShowNovelDetail] = useState(false);
@@ -211,6 +224,42 @@ const AdminDashboard = () => {
             }
         } catch (err) {
             console.error('Error loading banned words:', err);
+        }
+    };
+
+    const loadForumPosts = async (page = 1) => {
+        try {
+            const limit = 10;
+            const offset = (page - 1) * limit;
+            const res = await fetch(`${API_BASE}/admin/forum/posts?limit=${limit}&offset=${offset}`, {
+                headers: getAuthHeaders()
+            });
+            if (res.ok) {
+                const data = await res.json();
+                setForumPosts(data.data || []);
+                setForumPostsTotal(data.total || 0);
+                setForumPostsPage(page);
+            }
+        } catch (err) {
+            console.error('Error loading forum posts:', err);
+        }
+    };
+
+    const loadPublishedNovels = async (page = 1) => {
+        try {
+            const limit = 10;
+            const offset = (page - 1) * limit;
+            const res = await fetch(`${API_BASE}/admin/publish?limit=${limit}&offset=${offset}`, {
+                headers: getAuthHeaders()
+            });
+            if (res.ok) {
+                const data = await res.json();
+                setPublishedNovels(data.data || []);
+                setPublishedNovelsTotal(data.total || 0);
+                setPublishedNovelsPage(page);
+            }
+        } catch (err) {
+            console.error('Error loading published novels:', err);
         }
     };
 
@@ -514,6 +563,123 @@ const AdminDashboard = () => {
         }
     };
 
+    const handleDeleteForumPost = async (postId, title) => {
+        if (!window.confirm(`Xác nhận xóa bài viết "${title}" này?`)) return;
+        try {
+            const res = await fetch(`${API_BASE}/admin/forum/posts/${postId}`, {
+                method: 'DELETE',
+                headers: getAuthHeaders()
+            });
+            if (res.ok) {
+                alert('✅ Bài viết đã bị xóa!');
+                const newTotal = forumPostsTotal - 1;
+                const maxPage = Math.ceil(newTotal / 10);
+                const pageToLoad = forumPostsPage <= maxPage ? forumPostsPage : Math.max(1, maxPage);
+                loadForumPosts(pageToLoad);
+            } else {
+                alert('❌ Lỗi xóa bài viết');
+            }
+        } catch (err) {
+            alert('❌ Lỗi xóa bài viết');
+        }
+    };
+
+    const handleViewForumPostDetail = async (post) => {
+        setSelectedForumPost(post);
+        setShowForumPostDetail(true);
+        setForumPostComments([]);
+        setLoadingForumComments(true);
+        try {
+            const res = await fetch(`${API_BASE}/admin/forum/posts/${post.post_id}/comments`, {
+                headers: getAuthHeaders()
+            });
+        if (res.ok) {
+            const data = await res.json();
+            setForumPostComments(data.data || []);
+        } else {
+            console.error('Error loading forum comments:', res.status, res.statusText);
+            setForumPostComments([]);
+        }
+    } catch (err) {
+        console.error('Error loading forum comments:', err);
+        setForumPostComments([]);
+    } finally {
+        setLoadingForumComments(false);
+    }
+};
+
+const renderForumComment = (comment, depth = 0) => (
+    <div key={comment.comment_id} style={{
+        background: '#0f172a',
+        padding: '12px',
+        borderRadius: '6px',
+        marginBottom: '8px',
+        borderLeft: '3px solid #3b82f6',
+        marginLeft: depth * 16,
+        position: 'relative'
+    }}>
+        <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            marginBottom: '8px'
+        }}>
+            <strong style={{color: '#60a5fa'}}>{comment.username || 'Ẩn danh'}</strong>
+            <small style={{color: '#94a3b8'}}>
+                {new Date(comment.created_at).toLocaleString('vi-VN')}
+            </small>
+        </div>
+        <div style={{
+            color: '#cbd5e1',
+            whiteSpace: 'pre-wrap',
+            wordWrap: 'break-word',
+            lineHeight: '1.5'
+        }}>
+            {comment.content}
+        </div>
+        {comment.like_count > 0 && (
+            <small style={{color: '#10b981', display: 'block', marginTop: '6px'}}>
+                ❤️ {comment.like_count} like
+            </small>
+        )}
+        {comment.replies?.length > 0 && (
+            <div style={{marginTop: '10px'}}>
+                {comment.replies.map(reply => renderForumComment(reply, depth + 1))}
+            </div>
+        )}
+    </div>
+);
+
+    const handleCloseForumPostDetail = () => {
+        setShowForumPostDetail(false);
+        setSelectedForumPost(null);
+    };
+
+    const handleDeleteForumPostFromDetail = async (postId, title) => {
+        handleCloseForumPostDetail();
+        handleDeleteForumPost(postId, title);
+    };
+
+    const handleDeletePublishedNovel = async (publishId, title) => {
+        if (!window.confirm(`Xác nhận xóa xuất bản "${title}" này?`)) return;
+        try {
+            const res = await fetch(`${API_BASE}/admin/publish/${publishId}`, {
+                method: 'DELETE',
+                headers: getAuthHeaders()
+            });
+            if (res.ok) {
+                alert('✅ Xuất bản đã bị xóa!');
+                const newTotal = publishedNovelsTotal - 1;
+                const maxPage = Math.ceil(newTotal / 10);
+                const pageToLoad = publishedNovelsPage <= maxPage ? publishedNovelsPage : Math.max(1, maxPage);
+                loadPublishedNovels(pageToLoad);
+            } else {
+                alert('❌ Lỗi xóa xuất bản');
+            }
+        } catch (err) {
+            alert('❌ Lỗi xóa xuất bản');
+        }
+    };
+
     const handleViewReport = async (id) => {
         try {
             console.log('Fetching report detail:', id);
@@ -593,6 +759,14 @@ const AdminDashboard = () => {
             case 'banned-words':
                 loadBannedWords();
                 break;
+            case 'forum-management':
+                setForumPostsPage(1);
+                loadForumPosts(1);
+                break;
+            case 'publish-management':
+                setPublishedNovelsPage(1);
+                loadPublishedNovels(1);
+                break;
             default:
                 break;
         }
@@ -653,6 +827,18 @@ const AdminDashboard = () => {
                         onClick={() => handleTabChange('banned-words')}
                     >
                         🚫 Từ Cấm
+                    </button>
+                    <button 
+                        className={`admin-nav-item ${activeTab === 'forum-management' ? 'active' : ''}`}
+                        onClick={() => handleTabChange('forum-management')}
+                    >
+                        💬 Quản Lý Thảo Luận
+                    </button>
+                    <button 
+                        className={`admin-nav-item ${activeTab === 'publish-management' ? 'active' : ''}`}
+                        onClick={() => handleTabChange('publish-management')}
+                    >
+                        📖 Quản Lý Xuất Bản
                     </button>
                 </nav>
                 <div className="admin-user-info">
@@ -1128,8 +1314,258 @@ const AdminDashboard = () => {
                             )}
                         </div>
                     )}
+
+                    {/* QUẢN LÝ THẢO LUẬN */}
+                    {activeTab === 'forum-management' && (
+                        <div className="admin-section">
+                            <h2>💬 Quản Lý Thảo Luận</h2>
+                            {forumPosts.length === 0 ? (
+                                <p>Không có bài viết thảo luận</p>
+                            ) : (
+                                <div>
+                                    <p className="admin-total">Tổng cộng: {forumPostsTotal} bài viết</p>
+                                    <table className="admin-table">
+                                        <thead>
+                                            <tr>
+                                                <th>ID</th>
+                                                <th>Tiêu Đề</th>
+                                                <th>Người Đăng</th>
+                                                <th>Danh Mục</th>
+                                                <th>Bình Luận</th>
+                                                <th>Lượt Xem</th>
+                                                <th>Ngày Tạo</th>
+                                                <th>Hành Động</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {forumPosts.map(post => (
+                                                <tr key={post.post_id}>
+                                                    <td>#{post.post_id}</td>
+                                                    <td><strong>{post.title.substring(0, 50)}{post.title.length > 50 ? '...' : ''}</strong></td>
+                                                    <td>{post.username || 'Ẩn danh'}</td>
+                                                    <td>{post.category || 'Thảo luận'}</td>
+                                                    <td>{post.comment_count || 0}</td>
+                                                    <td>{post.view_count || 0}</td>
+                                                    <td>{new Date(post.created_at).toLocaleDateString('vi-VN')}</td>
+                                                    <td>
+                                                        <button 
+                                                            className="btn-approve" 
+                                                            onClick={() => handleViewForumPostDetail(post)}
+                                                        >
+                                                            👁️ Xem
+                                                        </button>
+                                                        <button 
+                                                            className="btn-delete" 
+                                                            onClick={() => handleDeleteForumPost(post.post_id, post.title)}
+                                                            style={{marginLeft: '8px'}}
+                                                        >
+                                                            🗑️ Xóa
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                    
+                                    {/* PAGINATION */}
+                                    {forumPostsTotal > 10 && (
+                                        <div className="pagination">
+                                            <button 
+                                                className="pagination-btn"
+                                                onClick={() => loadForumPosts(forumPostsPage - 1)}
+                                                disabled={forumPostsPage === 1}
+                                            >
+                                                ← Trước
+                                            </button>
+                                            
+                                            {Array.from({ length: Math.ceil(forumPostsTotal / 10) }, (_, i) => i + 1).map(page => (
+                                                <button 
+                                                    key={page}
+                                                    className={`pagination-btn ${forumPostsPage === page ? 'active' : ''}`}
+                                                    onClick={() => loadForumPosts(page)}
+                                                >
+                                                    {page}
+                                                </button>
+                                            ))}
+                                            
+                                            <button 
+                                                className="pagination-btn"
+                                                onClick={() => loadForumPosts(forumPostsPage + 1)}
+                                                disabled={forumPostsPage === Math.ceil(forumPostsTotal / 10)}
+                                            >
+                                                Sau →
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* QUẢN LÝ XUẤT BẢN */}
+                    {activeTab === 'publish-management' && (
+                        <div className="admin-section">
+                            <h2>📖 Quản Lý Xuất Bản</h2>
+                            {publishedNovels.length === 0 ? (
+                                <p>Không có nội dung xuất bản</p>
+                            ) : (
+                                <div>
+                                    <p className="admin-total">Tổng cộng: {publishedNovelsTotal} xuất bản</p>
+                                    <table className="admin-table">
+                                        <thead>
+                                            <tr>
+                                                <th>ID</th>
+                                                <th>Tên Truyện</th>
+                                                <th>Tập</th>
+                                                <th>Tiêu Đề Xuất Bản</th>
+                                                <th>Nhà Xuất Bản</th>
+                                                <th>Giá</th>
+                                                <th>Cửa Hàng</th>
+                                                <th>Ngày Tạo</th>
+                                                <th>Hành Động</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {publishedNovels.map(pub => (
+                                                <tr key={pub.publish_id}>
+                                                    <td>#{pub.publish_id}</td>
+                                                    <td><strong>{pub.novel_title || 'N/A'}</strong></td>
+                                                    <td>{pub.volume_number || 1}</td>
+                                                    <td>{pub.title ? pub.title.substring(0, 30) : 'N/A'}{pub.title && pub.title.length > 30 ? '...' : ''}</td>
+                                                    <td>{pub.publisher_name || 'N/A'}</td>
+                                                    <td>{pub.price ? `${pub.price.toLocaleString('vi-VN')}đ` : 'Miễn phí'}</td>
+                                                    <td>{pub.store_name || 'N/A'}</td>
+                                                    <td>{new Date(pub.created_at).toLocaleDateString('vi-VN')}</td>
+                                                    <td>
+                                                        <button 
+                                                            className="btn-delete" 
+                                                            onClick={() => handleDeletePublishedNovel(pub.publish_id, pub.title || 'Xuất bản')}
+                                                        >
+                                                            🗑️ Xóa
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                    
+                                    {/* PAGINATION */}
+                                    {publishedNovelsTotal > 10 && (
+                                        <div className="pagination">
+                                            <button 
+                                                className="pagination-btn"
+                                                onClick={() => loadPublishedNovels(publishedNovelsPage - 1)}
+                                                disabled={publishedNovelsPage === 1}
+                                            >
+                                                ← Trước
+                                            </button>
+                                            
+                                            {Array.from({ length: Math.ceil(publishedNovelsTotal / 10) }, (_, i) => i + 1).map(page => (
+                                                <button 
+                                                    key={page}
+                                                    className={`pagination-btn ${publishedNovelsPage === page ? 'active' : ''}`}
+                                                    onClick={() => loadPublishedNovels(page)}
+                                                >
+                                                    {page}
+                                                </button>
+                                            ))}
+                                            
+                                            <button 
+                                                className="pagination-btn"
+                                                onClick={() => loadPublishedNovels(publishedNovelsPage + 1)}
+                                                disabled={publishedNovelsPage === Math.ceil(publishedNovelsTotal / 10)}
+                                            >
+                                                Sau →
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </div>
             </main>
+
+            {/* MODAL CHI TIẾT BÀI VIẾT THẢO LUẬN */}
+            {showForumPostDetail && selectedForumPost && (
+                <div className="admin-modal-overlay" onClick={handleCloseForumPostDetail}>
+                    <div className="admin-modal" onClick={(e) => e.stopPropagation()} style={{maxWidth: '700px', maxHeight: '80vh', overflowY: 'auto'}}>
+                        <div className="admin-modal-header">
+                            <h3>💬 {selectedForumPost.title}</h3>
+                            <button className="admin-modal-close" onClick={handleCloseForumPostDetail}>✕</button>
+                        </div>
+
+                        <div className="admin-modal-body">
+                            <div className="info-row">
+                                <span className="label">Người Đăng:</span>
+                                <span>{selectedForumPost.username || 'Ẩn danh'}</span>
+                            </div>
+                            <div className="info-row">
+                                <span className="label">Danh Mục:</span>
+                                <span>{selectedForumPost.category || 'Thảo luận'}</span>
+                            </div>
+                            <div className="info-row">
+                                <span className="label">Lượt Xem:</span>
+                                <span>{selectedForumPost.view_count || 0}</span>
+                            </div>
+                            <div className="info-row">
+                                <span className="label">Bình Luận:</span>
+                                <span>{selectedForumPost.comment_count || 0}</span>
+                            </div>
+                            <div className="info-row">
+                                <span className="label">Ngày Tạo:</span>
+                                <span>{new Date(selectedForumPost.created_at).toLocaleString('vi-VN')}</span>
+                            </div>
+                            <div className="info-row">
+                                <span className="label">Nội Dung:</span>
+                                <div style={{
+                                    background: '#181a20',
+                                    padding: '12px',
+                                    borderRadius: '6px',
+                                    marginTop: '8px',
+                                    color: '#cbd5e1',
+                                    maxHeight: '300px',
+                                    overflow: 'auto',
+                                    whiteSpace: 'pre-wrap',
+                                    wordWrap: 'break-word',
+                                    lineHeight: '1.6'
+                                }}>
+                                    {selectedForumPost.content}
+                                </div>
+                            </div>
+
+                            {/* BÌNH LUẬN */}
+                            <div className="info-row" style={{marginTop: '20px'}}>
+                                <span className="label">💬 Bình Luận ({forumPostComments.length}):</span>
+                                {loadingForumComments ? (
+                                    <p style={{marginTop: '10px'}}>Đang tải...</p>
+                                ) : forumPostComments.length === 0 ? (
+                                    <p style={{marginTop: '10px', color: '#999'}}>Chưa có bình luận</p>
+                                ) : (
+                                    <div style={{marginTop: '12px', width: '100%'}}>
+                                        {forumPostComments.map(comment => renderForumComment(comment))}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="admin-modal-footer">
+                            <button 
+                                className="btn-delete" 
+                                onClick={() => handleDeleteForumPostFromDetail(selectedForumPost.post_id, selectedForumPost.title)}
+                            >
+                                🗑️ Xóa Bài Viết
+                            </button>
+                            <button 
+                                className="btn-approve" 
+                                onClick={handleCloseForumPostDetail}
+                            >
+                                Đóng
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* MODAL CHI TIẾT TRUYỆN */}
             {showNovelDetail && selectedNovel && (

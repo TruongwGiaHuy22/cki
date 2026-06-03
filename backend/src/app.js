@@ -67,6 +67,35 @@ const initializeTables = async () => {
   } catch (err) {
     console.warn("⚠️ Could not initialize ratings:", err.message);
   }
+
+  try {
+    // Create novel_publish table if not exists
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS novel_publish (
+        publish_id INT PRIMARY KEY AUTO_INCREMENT,
+        idln INT NOT NULL,
+        volume_number INT DEFAULT 1,
+        title VARCHAR(255),
+        cover VARCHAR(255),
+        publisher_name VARCHAR(255),
+        author_name VARCHAR(255),
+        illustrator_name VARCHAR(255),
+        translator_name VARCHAR(255),
+        total_pages INT,
+        release_date DATE,
+        price DECIMAL(10, 2),
+        short_description TEXT,
+        buy_link VARCHAR(500),
+        store_name VARCHAR(255),
+        active TINYINT DEFAULT 1,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(idln) REFERENCES QLTT(idln) ON DELETE CASCADE
+      )
+    `);
+    console.log("✅ novel_publish table initialized");
+  } catch (err) {
+    console.warn("⚠️ Could not initialize novel_publish:", err.message);
+  }
 };
 
 // Initialize tables on app start

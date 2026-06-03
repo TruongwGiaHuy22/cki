@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import './RatingModal.css';
 
 const RatingModal = ({ isOpen, onClose, novelId, onRatingSubmitted }) => {
   const [rating, setRating] = useState(null);

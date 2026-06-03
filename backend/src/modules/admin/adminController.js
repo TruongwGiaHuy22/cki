@@ -303,6 +303,60 @@ async function getBannedWords(req, res, next) {
   }
 }
 
+// 💬 FORUM POSTS MANAGEMENT
+async function getAllForumPosts(req, res, next) {
+  try {
+    const limit = Number(req.query.limit) || 20;
+    const offset = Number(req.query.offset) || 0;
+    const result = await service.getAllForumPosts(limit, offset);
+    res.json({ success: true, data: result.posts, total: result.total });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function deleteForumPost(req, res, next) {
+  try {
+    const postId = Number(req.params.id);
+    const result = await service.deleteForumPost(postId);
+    res.json({ success: true, data: result });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function getForumPostComments(req, res, next) {
+  try {
+    const postId = Number(req.params.id);
+    const comments = await service.getForumPostComments(postId);
+    res.json({ success: true, data: comments || [] });
+  } catch (err) {
+    next(err);
+  }
+}
+
+// 📖 NOVEL PUBLISH MANAGEMENT
+async function getAllPublishedNovels(req, res, next) {
+  try {
+    const limit = Number(req.query.limit) || 20;
+    const offset = Number(req.query.offset) || 0;
+    const result = await service.getAllPublishedNovels(limit, offset);
+    res.json({ success: true, data: result.publishes, total: result.total });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function deletePublishedNovel(req, res, next) {
+  try {
+    const publishId = Number(req.params.id);
+    const result = await service.deletePublishedNovel(publishId);
+    res.json({ success: true, data: result });
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   getDashboardStats,
   getPendingNovels,
@@ -330,4 +384,9 @@ module.exports = {
   createAnnouncement,
   deleteAnnouncement,
   getBannedWords,
+  getAllForumPosts,
+  deleteForumPost,
+  getForumPostComments,
+  getAllPublishedNovels,
+  deletePublishedNovel,
 };

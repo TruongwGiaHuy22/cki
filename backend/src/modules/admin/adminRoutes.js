@@ -49,4 +49,13 @@ router.delete('/announcements/:id', controller.deleteAnnouncement);
 // 🚫 Banned Words
 router.get('/banned-words', controller.getBannedWords);
 
+// 💬 Forum Posts Management
+router.get('/forum/posts', controller.getAllForumPosts);
+router.get('/forum/posts/:id/comments', controller.getForumPostComments);
+router.delete('/forum/posts/:id', controller.deleteForumPost);
+
+// 📖 Novel Publish Management
+router.get('/publish', controller.getAllPublishedNovels);
+router.delete('/publish/:id', controller.deletePublishedNovel);
+
 module.exports = router;

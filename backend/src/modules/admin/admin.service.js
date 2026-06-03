@@ -427,6 +427,112 @@ async function deleteAnnouncement(announcementId) {
   }
 }
 
+/* ==================== FORUM POSTS MANAGEMENT ==================== */
+async function getAllForumPosts(limit = 20, offset = 0) {
+  try {
+    const [posts] = await pool.query(`
+      SELECT fp.post_id, fp.title, fp.content, fp.category, fp.view_count, 
+             fp.created_at, fp.updated_at,
+             u.username, 
+             (SELECT COUNT(*) FROM forum_comments WHERE post_id = fp.post_id) as comment_count
+      FROM forum_posts fp
+      LEFT JOIN users u ON fp.user_id = u.user_id
+      ORDER BY fp.created_at DESC
+      LIMIT ? OFFSET ?
+    `, [limit, offset]);
+    
+    const [[count]] = await pool.query("SELECT COUNT(*) as total FROM forum_posts");
+    
+    return { posts, total: count?.total || 0 };
+  } catch (err) {
+    console.error("❌ Error getAllForumPosts:", err.message);
+    throw err;
+  }
+}
+
+async function deleteForumPost(postId) {
+  try {
+    // Disable foreign keys to cascade delete
+    await pool.query("SET FOREIGN_KEY_CHECKS=0");
+    
+    // Delete all comments and their likes
+    await pool.query("DELETE FROM forum_comment_likes WHERE comment_id IN (SELECT comment_id FROM forum_comments WHERE post_id = ?)", [postId]);
+    await pool.query("DELETE FROM forum_comments WHERE post_id = ?", [postId]);
+    
+    // Delete the post
+    const [result] = await pool.query("DELETE FROM forum_posts WHERE post_id = ?", [postId]);
+    
+    await pool.query("SET FOREIGN_KEY_CHECKS=1");
+    
+    return { success: true, message: "Forum post deleted successfully" };
+  } catch (err) {
+    await pool.query("SET FOREIGN_KEY_CHECKS=1");
+    console.error("❌ Error deleteForumPost:", err.message);
+    throw err;
+  }
+}
+
+async function getForumPostComments(postId) {
+  try {
+    const [comments] = await pool.query(`
+      SELECT fc.comment_id, fc.post_id, fc.user_id, fc.parent_id, fc.content, 
+             fc.like_count, fc.status, fc.created_at,
+             u.username
+      FROM forum_comments fc
+      LEFT JOIN users u ON fc.user_id = u.user_id
+      WHERE fc.post_id = ?
+      ORDER BY fc.parent_id ASC, fc.created_at ASC
+    `, [postId]);
+
+    const buildCommentTree = (allComments, parentId = null) => {
+      const filtered = allComments.filter(c => c.parent_id === parentId);
+      return filtered.map(comment => ({
+        ...comment,
+        username: comment.username || 'Ẩn danh',
+        like_count: comment.like_count || 0,
+        replies: buildCommentTree(allComments, comment.comment_id),
+      }));
+    };
+
+    return buildCommentTree(comments);
+  } catch (err) {
+    console.error("❌ Error getForumPostComments:", err.message);
+    throw err;
+  }
+}
+
+/* ==================== NOVEL PUBLISH MANAGEMENT ==================== */
+async function getAllPublishedNovels(limit = 20, offset = 0) {
+  try {
+    const [publishes] = await pool.query(`
+      SELECT np.publish_id, np.idln, np.volume_number, np.title, np.price, 
+             np.publisher_name, np.buy_link, np.store_name, np.created_at,
+             q.title as novel_title
+      FROM novel_publish np
+      LEFT JOIN QLTT q ON np.idln = q.idln
+      ORDER BY np.created_at DESC
+      LIMIT ? OFFSET ?
+    `, [limit, offset]);
+    
+    const [[count]] = await pool.query("SELECT COUNT(*) as total FROM novel_publish");
+    
+    return { publishes, total: count?.total || 0 };
+  } catch (err) {
+    console.error("❌ Error getAllPublishedNovels:", err.message);
+    throw err;
+  }
+}
+
+async function deletePublishedNovel(publishId) {
+  try {
+    const [result] = await pool.query("DELETE FROM novel_publish WHERE publish_id = ?", [publishId]);
+    return { success: true, message: "Published novel deleted successfully" };
+  } catch (err) {
+    console.error("❌ Error deletePublishedNovel:", err.message);
+    throw err;
+  }
+}
+
 module.exports = {
   getDashboardStats,
   getPendingNovels,
@@ -451,4 +557,9 @@ module.exports = {
   getAnnouncements,
   createAnnouncement,
   deleteAnnouncement,
+  getAllForumPosts,
+  deleteForumPost,
+  getForumPostComments,
+  getAllPublishedNovels,
+  deletePublishedNovel,
 };
