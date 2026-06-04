@@ -13,7 +13,7 @@ const bookmarkRoutes = require("../modules/bookmarks/bookmark.route");
 const novelPublishRoutes = require("../modules/novel-publish/novel-publish.route");
 const reportRoutes = require("../modules/reports/report.route");
 const pool = require("../config/db");
-const adminRoutes = require('../modules/admin/adminRoutes');
+const adminRoutes = require('../modules/admin/admin.route');
 const authRequired = require('../middlewares/authRequired');
 const adminRequired = require('../middlewares/adminRequired');
 
