@@ -1,8 +1,8 @@
 const jwt = require("jsonwebtoken");
 const { jwt: jwtConfig } = require("../config/env");
 
-function authRequired(req, res, next) {
-  const authHeader = req.headers.authorization;
+function authRequired(req, res, next) { // Middleware để kiểm tra token JWT và xác thực người dùng
+  const authHeader = req.headers.authorization; // Lấy header Authorization từ request, thường có dạng "Bearer <token>"
   
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
     return res.status(401).json({ success: false, message: "Unauthorized" });

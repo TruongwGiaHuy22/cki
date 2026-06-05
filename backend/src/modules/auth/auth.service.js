@@ -1,5 +1,5 @@
-const bcrypt = require("bcryptjs");
-const jwt = require("jsonwebtoken");
+const bcrypt = require("bcryptjs"); // Thêm bcrypt để hash mật khẩu
+const jwt = require("jsonwebtoken"); // Thêm jsonwebtoken để tạo token JWT
 const pool = require("../../config/db");
 const { jwt: jwtConfig } = require("../../config/env");
 
@@ -17,9 +17,8 @@ async function register(data) {
     throw err;
   }
 
-  const passwordHash = await bcrypt.hash(password, 10);
+  const passwordHash = await bcrypt.hash(password, 10); // Hash mật khẩu trước khi lưu vào DB
   
-  // 2. Đổi 'userpass' thành 'userpassword' cho đúng với DB
   const [result] = await pool.query(
     "INSERT INTO users (username, email, userpassword) VALUES (?, ?, ?)",
     [username, email, passwordHash]
@@ -31,7 +30,6 @@ async function register(data) {
 async function login(data) {
   const { identifier, password } = data;
   
-  // 3. Đổi 'id' thành 'user_id' và 'userpass' thành 'userpassword', thêm role
   const [rows] = await pool.query(
     "SELECT user_id, username, email, userpassword, role, active FROM users WHERE email = ? OR username = ? LIMIT 1",
     [identifier, identifier]
@@ -45,7 +43,6 @@ async function login(data) {
 
   const user = rows[0];
 
-  // Check if account is locked
   if (!user.active) {
     const err = new Error("Tài khoản của bạn đã bị khóa");
     err.status = 403;
@@ -54,7 +51,6 @@ async function login(data) {
   
   let ok = false;
   
-  // 4. Kiểm tra mật khẩu bằng 'user.userpassword' thay vì 'user.userpass'
   if (typeof user.userpassword === "string" && user.userpassword.startsWith("$2")) {
     ok = await bcrypt.compare(password, user.userpassword);
   } else {
@@ -67,16 +63,55 @@ async function login(data) {
     throw err;
   }
 
-  // 5. Sử dụng 'user.user_id' để tạo mã token JWT
   const token = jwt.sign({ sub: user.user_id, email: user.email }, jwtConfig.secret, {
     expiresIn: jwtConfig.expiresIn,
   });
 
-  // 6. Trả về đúng thông tin user_id kèm role
   return {
     token,
     user: { id: user.user_id, username: user.username, email: user.email, role: user.role },
   };
 }
 
-module.exports = { register, login };
+async function resetPassword(username, email, oldPassword, newPassword) {
+  // Find user with matching username AND email
+  const [rows] = await pool.query(
+    "SELECT user_id, userpassword FROM users WHERE username = ? AND email = ? LIMIT 1",
+    [username, email]
+  );
+
+  if (!rows.length) {
+    const err = new Error("Username hoặc email không tồn tại");
+    err.status = 404;
+    throw err;
+  }
+
+  const user = rows[0];
+
+  // Verify old password
+  let passwordMatches = false;
+  if (typeof user.userpassword === "string" && user.userpassword.startsWith("$2")) {
+    passwordMatches = await bcrypt.compare(oldPassword, user.userpassword);
+  } else {
+    passwordMatches = oldPassword === user.userpassword;
+  }
+
+  if (!passwordMatches) {
+    const err = new Error("Mật khẩu cũ không chính xác");
+    err.status = 401;
+    throw err;
+  }
+
+  // Hash the new password
+  const newPasswordHash = await bcrypt.hash(newPassword, 10);
+
+  // Update the password
+  await pool.query(
+    "UPDATE users SET userpassword = ? WHERE user_id = ?",
+    [newPasswordHash, user.user_id]
+  );
+
+  return { success: true };
+}
+
+module.exports = { register, login, resetPassword };

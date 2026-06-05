@@ -25,6 +25,8 @@ import ReadingHistory from "./pages/ReadingHistory.jsx";
 import Bookmarks from "./pages/Bookmarks.jsx";
 import AdminDashboard from "./pages/AdminDashboard.jsx";
 import AdminLogin from "./pages/AdminLogin.jsx";
+import QuyDinhChung from "./compoment/QuyDinhChung.jsx";
+import QuyDinhSangTac from "./compoment/QuyDinhSangTac.jsx";
 function AppLayout() {
   const location = useLocation();
   const isLoginPage = location.pathname === "/login";
@@ -70,14 +72,14 @@ function AppLayout() {
           <Route path="/forum/create" element={<ForumCreate />} />
           <Route path="/history" element={<ReadingHistory />} />
           <Route path="/bookmarks" element={<Bookmarks />} />
+          <Route path="/quy-dinh-chung" element={<QuyDinhChung />} />
+          <Route path="/quy-dinh-sang-tac" element={<QuyDinhSangTac />} />
         </Routes>
       </main>
       {!isLoginPage && !isRegisterPage && <Footer />}
     </div>
   );
 }
-
-
 
 export default function App() {
   return (

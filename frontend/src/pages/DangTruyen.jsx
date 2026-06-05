@@ -1,7 +1,7 @@
 // D:\allwweb\maulightnovel\frontend\src\pages\DangTruyen.jsx
 
 import React, { useState, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, Link } from "react-router-dom";
 
 const API_BASE = "http://localhost:4000";
 
@@ -24,6 +24,7 @@ export default function DangTruyen() {
   const [genres, setGenres] = useState([]);
   const [message, setMessage] = useState("");
   const [uploadLoading, setUploadLoading] = useState(false);
+  const [showGuide, setShowGuide] = useState(false);
   const [form, setForm] = useState({
     title: "",
     slug: "",
@@ -208,10 +209,70 @@ export default function DangTruyen() {
       <section className="dangtruyen-card">
         <h2>Series</h2>
         <div className="dangtruyen-note">
-          <p>Quy định chung khi đăng truyện tại <a href="#">đây</a></p>
-          <p>Quy định về Truyện sáng tác tại <a href="#">đây</a></p>
-          <p>Cần đọc <a href="#">Hướng dẫn đăng truyện</a></p>
+          <p>Quy định chung khi đăng truyện tại <Link to="/quy-dinh-chung">đây</Link></p>
+          <p>Quy định về Truyện sáng tác tại <Link to="/quy-dinh-sang-tac">đây</Link></p>
+          <p>
+            Cần đọc Hướng dẫn đăng truyện
+            <button
+              type="button"
+              onClick={() => setShowGuide((prev) => !prev)}
+              style={{
+                marginLeft: "12px",
+                padding: "6px 12px",
+                borderRadius: "6px",
+                border: "1px solid #2563eb",
+                backgroundColor: "#2563eb",
+                color: "#fff",
+                cursor: "pointer",
+                fontSize: "0.9rem"
+              }}
+            >
+              {showGuide ? "Ẩn hướng dẫn" : "Xem hướng dẫn"}
+            </button>
+          </p>
         </div>
+        {showGuide && (
+          <div style={{
+            marginTop: "20px",
+            padding: "16px",
+            borderRadius: "12px",
+            backgroundColor: "#0f172a",
+            color: "#fff",
+            border: "1px solid #334155"
+          }}>
+            <h3 style={{ margin: 0, marginBottom: "12px" }}>Hướng dẫn đăng truyện</h3>
+            <div style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+              gap: "12px"
+            }}>
+              {[1, 2, 3, 4, 5].map((index) => {
+                const imageUrl = `${API_BASE}/uploads/hdan${index}.png`;
+                return (
+                  <div key={index} style={{ textAlign: "center" }}>
+                    <a href={imageUrl} target="_blank" rel="noreferrer" style={{ display: "block", cursor: "pointer" }}>
+                      <img
+                        src={imageUrl}
+                        alt={`Hướng dẫn ${index}`}
+                        style={{
+                          width: "100%",
+                          height: "auto",
+                          borderRadius: "10px",
+                          border: "1px solid #334155",
+                          backgroundColor: "#0b1220"
+                        }}
+                        onError={(e) => {
+                          e.target.src = "/favicon.svg";
+                        }}
+                      />
+                    </a>
+                    <p style={{ marginTop: "8px", fontSize: "0.9rem", color: "#cbd5e1" }}>Bước {index}</p>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {showLoginMsg ? (
           <div style={{ color: "red", fontWeight: "bold", margin: "20px 0" }}>

@@ -1894,33 +1894,299 @@ header,
 }
 
 /* =========================================
-   RESPONSIVE (CHO MOBILE) 
+   RESPONSIVE - MOBILE FIRST APPROACH
    ========================================= */
-@media (max-width: 1024px) {
-  .xuatban-container {
-    flex-direction: column;
-  }
-  
-  .xuatban-sidebar {
-    position: static;
-    order: -1; /* Đưa bộ lọc lên đầu trên mobile */
-  }
 
-  .xuatban-item {
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
+/* 📱 EXTRA SMALL (xs): < 320px */
+@media (max-width: 320px) {
+  .home-carousel { grid-template-columns: 1fr; min-height: 150px; }
+  .header-top { flex-direction: column; gap: 0.75rem; }
+  .search-box { min-width: auto; width: 100%; }
+  .nav-main { gap: 0.5rem; font-size: 0.85rem; }
+  .dangtruyen-genres { grid-template-columns: 1fr; }
+  .danhsach-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.75rem; }
+  .login-form-box { padding: 1rem; max-width: 95vw; }
+  .stat-item { padding: 0.75rem 0.5rem; font-size: 0.8rem; }
+  .noveldetail-title { font-size: 1.3rem; }
+  
+  /* Forum XS */
+  .forum-container { padding: 0.5rem; }
+  .forum-topBar { gap: 0.5rem; }
+  .forum-createBtn { font-size: 0.75rem; padding: 0.3rem 0.75rem; }
+  .forum-postItem { gap: 0.5rem; padding: 0.5rem; }
+  .forum-postTitle { font-size: 0.9rem; }
+  .forum-postStats { gap: 0.75rem; }
+  .forum-editBtn, .forum-deleteBtn { font-size: 0.7rem; padding: 0.3rem 0.5rem; }
+}
+
+/* 📱 SMALL (sm): 320px - 640px */
+@media (max-width: 640px) {
+  .home-carousel { grid-template-columns: 1fr; min-height: 180px; }
+  .home-card-grid-fullwidth { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .home-card-grid-3 { grid-template-columns: repeat(2, 1fr); }
+  .home-card-img { height: 200px; }
+  
+  .header-top { flex-wrap: wrap; padding: 0.75rem; gap: 0.75rem; }
+  .logo { font-size: 1rem; }
+  .nav-main { gap: 0.6rem; font-size: 0.9rem; }
+  .search-box { min-width: 150px; padding: 0.5rem 0.75rem; }
+  
+  .danhsach-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+  .danhsach-sidebar { grid-template-columns: 1fr; }
+  .danhsach-card .home-card-img { height: 220px; }
+  
+  .login-form-box { max-width: 95vw; padding: 1.25rem; }
+  .login-title { font-size: 1.3rem; }
+  .register-form { max-width: 95vw; padding: 1.25rem; }
+  
+  .dangtruyen-genres { grid-template-columns: repeat(2, 1fr); gap: 0; }
+  .dangtruyen-form input, .dangtruyen-form select, .dangtruyen-form textarea {
+    font-size: 16px;
   }
   
-  .xuatban-info {
-    grid-template-columns: 1fr;
-    text-align: left;
-  }
+  .noveldetail-hero { grid-template-columns: 180px 1fr; gap: 0.75rem; }
+  .noveldetail-cover { height: 350px; }
+  .noveldetail-title { font-size: 1.5rem; }
+  .noveldetail-stats { grid-template-columns: repeat(2, 1fr); gap: 0.75rem; }
   
-  .xuatban-btn {
-    align-self: center;
+  .xuatban-container { flex-direction: column; padding: 1.5rem 1rem; gap: 1.5rem; }
+  .xuatban-item { flex-direction: column; align-items: center; text-align: center; gap: 1rem; }
+  .xuatban-img img { width: 180px; height: 270px; }
+  .xuatban-info { grid-template-columns: 1fr; }
+  
+  .ai-container { grid-template-columns: 1fr; }
+  .ai-sidebar { grid-template-columns: 1fr; }
+  .ai-genre-list { grid-template-columns: 1fr; }
+  
+  .sangtac-container { grid-template-columns: 1fr; }
+  .sangtac-sidebar { position: static; }
+  
+  /* Forum Responsive - Small */
+  .forum-container { padding: 0.75rem; }
+  .forum-topBar { flex-direction: column; gap: 0.75rem; }
+  .forum-categoryNav { gap: 0.3rem; }
+  .forum-catBtn { padding: 0.4rem 0.75rem; font-size: 0.8rem; }
+  .forum-createBtn { padding: 0.4rem 1rem; font-size: 0.8rem; width: 100%; }
+  .forum-formBox { padding: 1rem; }
+  .forum-postItem { flex-direction: column; align-items: flex-start; gap: 0.75rem; padding: 0.75rem; }
+  .forum-postMain { width: 100%; }
+  .forum-titleWrapper { flex-direction: column; align-items: flex-start; }
+  .forum-postTitle { font-size: 0.95rem; }
+  .forum-postStats { justify-content: flex-start; gap: 1rem; flex-wrap: wrap; }
+  .forum-statBox { min-width: 50px; }
+  .forum-statNum { font-size: 0.9rem; }
+  .forum-postActions { flex-direction: column; justify-content: flex-start; align-items: flex-start; gap: 0.5rem; width: 100%; }
+  .forum-actionButtons { width: 100%; gap: 0.5rem; }
+  .forum-editBtn, .forum-deleteBtn { flex: 1; font-size: 0.8rem; padding: 0.4rem 0.75rem; }
+  .forum-pagination { flex-wrap: wrap; padding: 1rem; gap: 0.25rem; }
+  .forum-pageNumbers { gap: 0.25rem; }
+  .forum-pageNumber { font-size: 0.8rem; padding: 0.35rem 0.5rem; min-width: auto; }
+  .forum-postDetailBox { padding: 1rem; }
+  .forum-postDetailHeader { flex-direction: column; align-items: flex-start; }
+  .forum-postDetailTitle { font-size: 1.3rem; }
+  .forum-postDetailMeta { flex-direction: column; align-items: flex-start; }
+  .forum-postDetailContent { font-size: 0.9rem; margin-bottom: 1rem; }
+  .forum-postDetailStats { flex-direction: column; gap: 0.5rem; padding: 0.75rem; font-size: 0.85rem; }
+  .forum-formGroup { margin-bottom: 1rem; }
+  .forum-textarea { min-height: 150px; font-size: 16px; }
+  .comment-form { padding: 0.75rem; }
+  .comment-form textarea { font-size: 16px; }
+}
+
+/* 📱 MEDIUM (md): 640px - 1024px */
+@media (max-width: 1024px) and (min-width: 641px) {
+  .home-carousel { grid-template-columns: 1fr; min-height: 280px; }
+  .home-card-grid-fullwidth { grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .home-card-grid-3 { grid-template-columns: repeat(3, 1fr); gap: 15px; }
+  .home-card-img { height: 240px; }
+  
+  .header-top { gap: 1rem; padding: 0.9rem 1.2rem; }
+  .search-box { min-width: 180px; }
+  
+  .danhsach-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1.25rem; }
+  .danhsach-sidebar { grid-template-columns: repeat(2, 1fr); gap: 1rem; }
+  .danhsach-card .home-card-img { height: 260px; }
+  
+  .login-form-box { max-width: 500px; }
+  .register-form { max-width: 500px; }
+  
+  .dangtruyen-genres { grid-template-columns: repeat(3, 1fr); gap: 0; }
+  
+  .noveldetail-hero { grid-template-columns: 220px 1fr; gap: 1rem; }
+  .noveldetail-cover { height: 380px; }
+  .noveldetail-stats { grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+  
+  .xuatban-container { flex-direction: column; padding: 2rem 1.5rem; }
+  .xuatban-item { flex-direction: row; align-items: flex-start; text-align: left; }
+  .xuatban-img img { width: 200px; height: 300px; }
+  .xuatban-info { grid-template-columns: repeat(2, 1fr); }
+  .xuatban-btn { align-self: flex-start; }
+  
+  .ai-container { grid-template-columns: minmax(0, 2fr) 1fr; }
+  .ai-sidebar { grid-template-columns: 1fr; }
+  .ai-genre-list { grid-template-columns: repeat(2, 1fr); }
+  
+  .sangtac-container { grid-template-columns: minmax(0, 2fr) 1fr; }
+  .sangtac-sidebar { position: static; grid-template-columns: 1fr; }
+  
+  /* Forum Responsive - Medium */
+  .forum-container { padding: 1.25rem; max-width: 95vw; margin: 1.5rem auto; }
+  .forum-topBar { gap: 0.85rem; }
+  .forum-categoryNav { gap: 0.5rem; }
+  .forum-catBtn { padding: 0.45rem 0.9rem; font-size: 0.85rem; }
+  .forum-createBtn { padding: 0.45rem 1.2rem; font-size: 0.85rem; }
+  .forum-formBox { padding: 1.5rem; }
+  .forum-postItem { gap: 1rem; padding: 1rem; }
+  .forum-postMain { gap: 0.5rem; }
+  .forum-titleWrapper { gap: 0.75rem; flex-wrap: wrap; }
+  .forum-postTitle { font-size: 1rem; }
+  .forum-postStats { gap: 1.25rem; }
+  .forum-statBox { min-width: 60px; }
+  .forum-statNum { font-size: 1rem; }
+  .forum-postActions { gap: 1.5rem; }
+  .forum-actionButtons { gap: 0.5rem; }
+  .forum-editBtn, .forum-deleteBtn { padding: 0.5rem 0.9rem; font-size: 0.85rem; }
+  .forum-pagination { padding: 1.25rem; gap: 0.4rem; }
+  .forum-pageNumber { font-size: 0.85rem; padding: 0.4rem 0.65rem; }
+  .forum-postDetailBox { padding: 1.5rem; }
+  .forum-postDetailHeader { flex-wrap: wrap; gap: 1rem; }
+  .forum-postDetailTitle { font-size: 1.5rem; }
+  .forum-postDetailContent { font-size: 0.95rem; }
+  .forum-formGroup { margin-bottom: 1.25rem; }
+  .forum-textarea { min-height: 180px; }
+  .comment-form { padding: 1rem; }
+  .comment-item { padding: 1rem; margin-bottom: 0.75rem; }
+}
+
+/* 🖥️ LARGE (lg): 1024px - 1280px */
+@media (min-width: 1025px) and (max-width: 1280px) {
+  .home-carousel { min-height: 320px; }
+  .home-card-grid-fullwidth { grid-template-columns: repeat(6, 1fr); gap: 1rem; }
+  .home-card-grid-3 { grid-template-columns: repeat(4, 1fr); }
+  .home-card-img { height: 260px; }
+  
+  .danhsach-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  .danhsach-layout { grid-template-columns: minmax(0, 1fr) 320px; }
+  .danhsach-card .home-card-img { height: 280px; }
+  
+  .noveldetail-hero { grid-template-columns: 240px 1fr; }
+  .noveldetail-cover { height: 400px; }
+  .noveldetail-stats { grid-template-columns: repeat(4, 1fr); }
+  
+  .xuatban-item { gap: 1.75rem; }
+  .xuatban-img img { width: 200px; height: 300px; }
+  
+  .ai-container { grid-template-columns: minmax(0, 2.3fr) minmax(280px, 1fr); }
+  .sangtac-container { grid-template-columns: minmax(0, 2.3fr) minmax(280px, 1fr); }
+}
+
+/* 🖥️ EXTRA LARGE (xl): > 1280px */
+@media (min-width: 1281px) {
+  .home-carousel { min-height: 350px; }
+  .home-card-grid-fullwidth { grid-template-columns: repeat(8, 1fr); }
+  .home-card-grid-3 { grid-template-columns: repeat(5, 1fr); }
+  .home-card-img { height: 280px; }
+  
+  .danhsach-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .danhsach-layout { grid-template-columns: minmax(0, 1fr) 360px; }
+  .danhsach-card .home-card-img { height: 300px; }
+  
+  .noveldetail-hero { grid-template-columns: 260px 1fr; }
+  .noveldetail-cover { height: 430px; }
+  
+  .xuatban-img img { width: 220px; height: 330px; }
+}
+
+/* 📱 TABLET LANDSCAPE: 768px - 1024px */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .header-tabs { gap: 1rem; padding: 0.85rem 1.2rem; }
+  .tab-btn-small { padding: 0.45rem 1.1rem; font-size: 0.85rem; }
+  
+  .home-sidebar { grid-template-columns: repeat(2, 1fr); }
+  .sidebar-list { grid-template-columns: 1fr; }
+  
+  .comments-container { padding: 1.5rem; margin-top: 2rem; }
+  .comment-form { padding: 1rem; }
+  .comment-item { padding: 1rem; }
+  
+  /* Forum Responsive - Tablet Landscape */
+  .forum-container { padding: 1.5rem 2rem; max-width: 100%; }
+  .forum-topBar { gap: 1rem; }
+  .forum-categoryNav { gap: 0.75rem; }
+  .forum-postItem { gap: 1.25rem; padding: 1.25rem; }
+  .forum-postStats { gap: 1.5rem; }
+  .forum-postActions { gap: 1.5rem; }
+  .forum-pagination { padding: 1.5rem; }
+  .forum-postDetailBox { padding: 2rem; }
+  .forum-formBox { padding: 2rem; }
+}
+
+/* 🔄 ORIENTATION: PORTRAIT */
+@media (orientation: portrait) {
+  .header-right { gap: 0.75rem; }
+  .search-box { max-width: 200px; }
+  main { padding: 1rem 0.75rem; }
+}
+
+/* 🔄 ORIENTATION: LANDSCAPE */
+@media (orientation: landscape) and (max-height: 500px) {
+  header { padding: 0.5rem 1rem; }
+  .nav-main { gap: 1rem; }
+  main { padding: 0.75rem; }
+  .home-carousel { min-height: 200px; }
+}
+
+/* 📝 TOUCH DEVICES */
+@media (hover: none) and (pointer: coarse) {
+  .comment-btn { padding: 0.5rem 1rem; }
+  .rating-star { font-size: 48px; }
+  .btn-login { padding: 0.65rem 1.25rem; }
+  a { cursor: pointer; }
+  
+  /* Forum Touch */
+  .forum-postItem { padding: 1rem; }
+  .forum-catBtn { padding: 0.6rem 1rem; }
+  .forum-editBtn, .forum-deleteBtn { padding: 0.6rem 1.2rem; }
+  .forum-pageNumber { padding: 0.5rem 0.75rem; }
+}
+
+/* 🌙 DARK MODE TWEAKS */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #111827;
+    --surface: #1f2937;
+    --text: #f3f4f6;
+    --text-muted: #9ca3af;
+    --border: #374151;
   }
 }
+
+/* ⚡ HIGH CONTRAST MODE */
+@media (prefers-contrast: more) {
+  .home-card { box-shadow: 0 0 0 2px currentColor; }
+  .login-input { border-width: 2px; }
+  .dangtruyen-form input { border-width: 2px; }
+}
+
+/* 🎬 REDUCE MOTION */
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+}
+
+/* 🔍 PRINT STYLES */
+@media print {
+  .header-main, .footer, .scroll-top, .dangtruyen-topnav { display: none; }
+  main { padding: 0; }
+  .home-card { page-break-inside: avoid; }
+  body { background: #fff; color: #000; }
+}
+
+/* ⚠️ LOW BANDWIDTH */
+@media (prefers-reduced-data: reduce) {
+  * { animation: none !important; }
+  img { border: 1px solid #ccc; }
+}
+
 
 /* NOVEL DETAIL */
 .noveldetail-page {

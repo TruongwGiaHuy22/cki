@@ -1,17 +1,17 @@
-const pool = require("../../config/db");
+const pool = require("../../config/db"); // Kết nối pool để truy vấn database
 
 /* ==================== DASHBOARD STATS ==================== */
-async function getDashboardStats() {
+async function getDashboardStats() { // Lấy thống kê tổng quan cho dashboard admin
   try {
-    const [[novelCount]] = await pool.query("SELECT COUNT(*) as count FROM QLTT");
-    const [[userCount]] = await pool.query("SELECT COUNT(*) as count FROM users");
-    const [[commentCount]] = await pool.query("SELECT COUNT(*) as count FROM comments");
+    const [[novelCount]] = await pool.query("SELECT COUNT(*) as count FROM QLTT"); // Đếm tổng số tiểu thuyết
+    const [[userCount]] = await pool.query("SELECT COUNT(*) as count FROM users"); // Đếm tổng số người dùng
+    const [[commentCount]] = await pool.query("SELECT COUNT(*) as count FROM comments"); // Đếm tổng số bình luận
     // Count error reports and feedback
-    const [[reportCount]] = await pool.query("SELECT COUNT(*) as count FROM reports");
+    const [[reportCount]] = await pool.query("SELECT COUNT(*) as count FROM reports"); // Đếm tổng số báo cáo
 
-    return {
-      novels: novelCount?.count || 0,
-      users: userCount?.count || 0,
+    return { // Trả về một object chứa tất cả các thống kê cần thiết cho dashboard
+      novels: novelCount?.count || 0, // Sử dụng optional chaining để tránh lỗi nếu count là undefined
+      users: userCount?.count || 0, 
       comments: commentCount?.count || 0,
       pendingReports: reportCount?.count || 0,
     };
@@ -22,7 +22,7 @@ async function getDashboardStats() {
 }
 
 /* ==================== NOVELS MANAGEMENT ==================== */
-async function getPendingNovels() {
+async function getPendingNovels() { // Lấy danh sách tiểu thuyết đang chờ duyệt với phân trang
   try {
     const [novels] = await pool.query(`
       SELECT q.idln, q.title, q.author, q.authordraw, q.cover, 
@@ -31,15 +31,15 @@ async function getPendingNovels() {
       LEFT JOIN users u ON q.created_by = u.user_id
       WHERE q.active = 0
       ORDER BY q.created_at DESC
-    `);
-    return novels;
+    `); // Lấy tất cả tiểu thuyết có active = 0 (chờ duyệt), kèm thông tin người tạo
+    return novels; // Trả về danh sách tiểu thuyết đang chờ duyệt
   } catch (err) {
     console.error("❌ Error getPendingNovels:", err.message);
     throw err;
   }
 }
 
-async function getAllNovels(limit = 50, offset = 0) {
+async function getAllNovels(limit = 50, offset = 0) { // Lấy danh sách tất cả tiểu thuyết với phân trang
   try {
     const [novels] = await pool.query(`
       SELECT q.idln, q.title, q.author, q.authordraw, q.cover, 
@@ -49,9 +49,9 @@ async function getAllNovels(limit = 50, offset = 0) {
       LEFT JOIN users u ON q.created_by = u.user_id
       ORDER BY q.created_at DESC
       LIMIT ? OFFSET ?
-    `, [limit, offset]);
+    `, [limit, offset]); // Lấy tất cả tiểu thuyết, kèm thông tin người tạo, có phân trang
     
-    const [[count]] = await pool.query("SELECT COUNT(*) as total FROM QLTT");
+    const [[count]] = await pool.query("SELECT COUNT(*) as total FROM QLTT"); // Đếm tổng số tiểu thuyết để trả về cùng với dữ liệu phân trang
     
     return { novels, total: count?.total || 0 };
   } catch (err) {
@@ -60,20 +60,20 @@ async function getAllNovels(limit = 50, offset = 0) {
   }
 }
 
-async function approveNovel(id) {
+async function approveNovel(id) { // Duyệt một tiểu thuyết - chỉ dành cho admin
   try {
-    const [result] = await pool.query("UPDATE QLTT SET active = 1 WHERE idln = ?", [id]);
-    return { success: true, message: "Novel approved" };
+    const [result] = await pool.query("UPDATE QLTT SET active = 1 WHERE idln = ?", [id]); // Cập nhật trường active = 1 để duyệt truyện
+    return { success: true, message: "Novel approved" }; // Trả về thông báo thành công
   } catch (err) {
     console.error("❌ Error approveNovel:", err.message);
     throw err;
   }
 }
 
-async function rejectNovel(id) {
+async function rejectNovel(id) { // Từ chối một tiểu thuyết - chỉ dành cho admin
   try {
     // Xóa hoàn toàn truyện khi từ chối (không chỉ set active = 0)
-    await pool.query("SET FOREIGN_KEY_CHECKS=0");
+    await pool.query("SET FOREIGN_KEY_CHECKS=0"); // Tạm thời tắt kiểm tra khóa ngoại để xóa dữ liệu liên quan mà không bị lỗi
     
     await pool.query("DELETE FROM chapters WHERE idln = ?", [id]);
     await pool.query("DELETE FROM volumes WHERE idln = ?", [id]);
@@ -93,7 +93,7 @@ async function rejectNovel(id) {
   }
 }
 
-async function deleteNovelAsAdmin(id) {
+async function deleteNovelAsAdmin(id) { // Xóa một tiểu thuyết - chỉ dành cho admin
   try {
     // Disable foreign keys, delete like in novel deletion
     await pool.query("SET FOREIGN_KEY_CHECKS=0");
@@ -117,7 +117,7 @@ async function deleteNovelAsAdmin(id) {
 }
 
 /* ==================== USERS MANAGEMENT ==================== */
-async function getAllUsers(limit = 20, offset = 0) {
+async function getAllUsers(limit = 20, offset = 0) { // Lấy danh sách tất cả người dùng với phân trang
   try {
     const [users] = await pool.query(`
       SELECT user_id, username, email, role, active, created_at 
@@ -525,7 +525,7 @@ async function getAllPublishedNovels(limit = 20, offset = 0) {
 
 async function deletePublishedNovel(publishId) {
   try {
-    const [result] = await pool.query("DELETE FROM novel_publish WHERE publish_id = ?", [publishId]);
+    const [result] = await pool.query("DELETE FROM novel_publish WHERE publish_id = ?", [publishId]); // Xóa bản xuất bản theo ID
     return { success: true, message: "Published novel deleted successfully" };
   } catch (err) {
     console.error("❌ Error deletePublishedNovel:", err.message);

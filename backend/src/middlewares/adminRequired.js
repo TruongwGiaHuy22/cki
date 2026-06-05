@@ -27,7 +27,7 @@ async function adminRequired(req, res, next) {
     }
 
     const user = users[0];
-    console.log(`👤 Admin check: User ${user.user_id} has role "${user.role}"`);
+    console.log(`👤 Admin check: User ${user.user_id} has role "${user.role}"`); 
     
     // Chỉ cho phép admin
     if (user.role !== 'admin') {

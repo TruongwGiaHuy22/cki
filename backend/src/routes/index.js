@@ -93,5 +93,4 @@ router.post("/upload-cover", authRequired, upload.single("cover"), (req, res) =>
     res.status(500).json({ success: false, message: err.message });
   }
 });
-
 module.exports = router;
